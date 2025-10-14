@@ -244,22 +244,32 @@
                 <!-- Admin Navigation Tabs -->
                 <div class="bg-white rounded-lg shadow-lg mb-8">
                     <div class="border-b border-gray-200">
-                        <nav class="flex space-x-8 px-6">
-                            <button onclick="showAdminTab('bookings')" id="tab-bookings" class="admin-tab active py-4 px-2 border-b-2 border-blue-500 text-blue-600 font-medium">
-                                📋 Bookings
-                            </button>
-                            <button onclick="showAdminTab('cars')" id="tab-cars" class="admin-tab py-4 px-2 border-b-2 border-transparent text-gray-500 hover:text-gray-700">
-                                🚗 Cars Management
-                            </button>
-                            <button onclick="showAdminTab('offers')" id="tab-offers" class="admin-tab py-4 px-2 border-b-2 border-transparent text-gray-500 hover:text-gray-700">
-                                🎁 Offers
-                            </button>
-                            <button onclick="showAdminTab('pricing')" id="tab-pricing" class="admin-tab py-4 px-2 border-b-2 border-transparent text-gray-500 hover:text-gray-700">
-                                💰 Pricing & Discounts
-                            </button>
-                            <button onclick="showAdminTab('calendar')" id="tab-calendar" class="admin-tab py-4 px-2 border-b-2 border-transparent text-gray-500 hover:text-gray-700">
-                                📅 Calendar
-                            </button>
+                        <nav class="flex justify-between items-center px-6">
+                            <div class="flex space-x-8">
+                                <button onclick="showAdminTab('bookings')" id="tab-bookings" class="admin-tab active py-4 px-2 border-b-2 border-blue-500 text-blue-600 font-medium">
+                                    📋 Bookings
+                                </button>
+                                <button onclick="showAdminTab('cars')" id="tab-cars" class="admin-tab py-4 px-2 border-b-2 border-transparent text-gray-500 hover:text-gray-700">
+                                    🚗 Cars Management
+                                </button>
+                                <button onclick="showAdminTab('offers')" id="tab-offers" class="admin-tab py-4 px-2 border-b-2 border-transparent text-gray-500 hover:text-gray-700">
+                                    🎁 Offers
+                                </button>
+                                <button onclick="showAdminTab('pricing')" id="tab-pricing" class="admin-tab py-4 px-2 border-b-2 border-transparent text-gray-500 hover:text-gray-700">
+                                    💰 Pricing & Discounts
+                                </button>
+                                <button onclick="showAdminTab('calendar')" id="tab-calendar" class="admin-tab py-4 px-2 border-b-2 border-transparent text-gray-500 hover:text-gray-700">
+                                    📅 Calendar
+                                </button>
+                            </div>
+                            <div class="flex gap-2">
+                                <button onclick="resetCarsData()" class="bg-orange-600 text-white px-4 py-2 rounded-lg hover:bg-orange-700 text-sm">
+                                    🔄 Reset Cars
+                                </button>
+                                <button onclick="adminLogout()" class="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 text-sm">
+                                    🚪 Logout
+                                </button>
+                            </div>
                         </nav>
                     </div>
                 </div>
@@ -817,31 +827,73 @@
         let currentImageIndex = 0;
         let discounts = { global: 0, seasonal: 0, longterm: 0 };
 
+        // Add default cars to Firebase
+        async function addDefaultCarsToFirebase() {
+            try {
+                console.log('Adding default cars to Firebase...');
+                const carsRef = database.ref('cars');
+                
+                // Clear existing cars first
+                await carsRef.remove();
+                
+                // Add each default car to Firebase one by one
+                for (const car of cars) {
+                    console.log(`Adding ${car.name} to Firebase...`);
+                    await carsRef.child(car.id).set({
+                        name: car.name,
+                        color: car.color,
+                        images: car.images,
+                        price: car.price,
+                        features: car.features,
+                        specs: car.specs
+                    });
+                    console.log(`${car.name} added successfully!`);
+                }
+                
+                console.log('All default cars added to Firebase successfully!');
+            } catch (error) {
+                console.error('Error adding default cars to Firebase:', error);
+            }
+        }
+
         // Initialize the app
         document.addEventListener('DOMContentLoaded', function() {
             initializeFirebaseListeners();
             setMinDate();
             loadDiscounts();
+            checkAdminSession();
         });
 
         // Initialize Firebase real-time listeners
         function initializeFirebaseListeners() {
-            // First load default cars, then listen for Firebase changes
+            // First load default cars immediately
             loadCars();
+            
+            // Force add default cars to Firebase on every load
+            setTimeout(() => {
+                addDefaultCarsToFirebase();
+            }, 1000);
             
             // Listen for cars changes
             database.ref('cars').on('value', (snapshot) => {
                 const carsData = snapshot.val();
+                console.log('Firebase cars data:', carsData);
+                
                 if (carsData && Object.keys(carsData).length > 0) {
                     // Convert Firebase object to array with proper structure
-                    cars = Object.keys(carsData).map(key => ({
+                    const firebaseCars = Object.keys(carsData).map(key => ({
                         id: key,
                         ...carsData[key]
                     }));
+                    
+                    console.log('Converted Firebase cars:', firebaseCars);
+                    
+                    // Update cars array with Firebase data
+                    cars = firebaseCars;
                     loadCars();
                 } else {
-                    // Keep default cars if Firebase is empty and load them
                     console.log('No cars in Firebase, using default cars');
+                    // If no cars in Firebase, keep default cars visible
                     loadCars();
                 }
                 
@@ -1791,11 +1843,66 @@
         function adminLogin() {
             const key = document.getElementById('admin-key').value;
             if (key === 'admin123') {
+                // Store admin session in localStorage
+                localStorage.setItem('adminLoggedIn', 'true');
+                localStorage.setItem('adminLoginTime', Date.now().toString());
+                
                 document.getElementById('admin-login').classList.add('hidden');
                 document.getElementById('admin-panel').classList.remove('hidden');
                 showAdminTab('bookings');
             } else {
                 alert('Invalid admin key');
+            }
+        }
+
+        function adminLogout() {
+            // Clear admin session
+            localStorage.removeItem('adminLoggedIn');
+            localStorage.removeItem('adminLoginTime');
+            
+            document.getElementById('admin-login').classList.remove('hidden');
+            document.getElementById('admin-panel').classList.add('hidden');
+            document.getElementById('admin-key').value = '';
+            
+            alert('Logged out successfully!');
+        }
+
+        // Reset cars data function
+        async function resetCarsData() {
+            if (!confirm('Are you sure you want to reset all cars data? This will remove all cars and add default cars again.')) {
+                return;
+            }
+            
+            try {
+                console.log('Resetting cars data...');
+                await addDefaultCarsToFirebase();
+                alert('Cars data reset successfully! All 6 default cars have been restored.');
+                loadCarsManagement();
+            } catch (error) {
+                console.error('Error resetting cars data:', error);
+                alert('Error resetting cars data');
+            }
+        }
+
+        function checkAdminSession() {
+            const isLoggedIn = localStorage.getItem('adminLoggedIn');
+            const loginTime = localStorage.getItem('adminLoginTime');
+            
+            // Check if admin is logged in and session is still valid (24 hours)
+            if (isLoggedIn === 'true' && loginTime) {
+                const currentTime = Date.now();
+                const sessionDuration = 24 * 60 * 60 * 1000; // 24 hours in milliseconds
+                
+                if (currentTime - parseInt(loginTime) < sessionDuration) {
+                    // Session is still valid, show admin panel
+                    document.getElementById('admin-login').classList.add('hidden');
+                    document.getElementById('admin-panel').classList.remove('hidden');
+                    showAdminTab('bookings');
+                } else {
+                    // Session expired, clear it
+                    localStorage.removeItem('adminLoggedIn');
+                    localStorage.removeItem('adminLoginTime');
+                }
             }
         }
 
@@ -2176,5 +2283,5 @@
             });
         });
     </script>
-<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'98e642e6e0aa2e83',t:'MTc2MDQzNjM1OC4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'98e651d4e2d28ae1',t:'MTc2MDQzNjk3MC4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
 </html>
