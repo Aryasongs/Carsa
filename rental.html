@@ -1,0 +1,2180 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sharan Car Rental - Premium Car Rentals</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-storage-compat.js"></script>
+    <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBFw0Qbyq9zTFTd-tUY6dw901SwHSR3-34&libraries=places"></script>
+    <style>
+        body {
+            box-sizing: border-box;
+        }
+        
+        .car-card {
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+        
+        .car-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+        }
+        
+        .whatsapp-float {
+            position: fixed;
+            width: 60px;
+            height: 60px;
+            bottom: 40px;
+            right: 40px;
+            background-color: #25d366;
+            color: #FFF;
+            border-radius: 50px;
+            text-align: center;
+            font-size: 30px;
+            box-shadow: 2px 2px 3px #999;
+            z-index: 100;
+            transition: all 0.3s ease;
+        }
+        
+        .whatsapp-float:hover {
+            background-color: #128c7e;
+            transform: scale(1.1);
+        }
+        
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.5);
+        }
+        
+        .modal.active {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .date-picker {
+            appearance: none;
+            -webkit-appearance: none;
+        }
+        
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #1e40af;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .image-carousel {
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .carousel-container {
+            display: flex;
+            transition: transform 0.3s ease;
+        }
+        
+        .carousel-btn {
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+            background: rgba(0,0,0,0.5);
+            color: white;
+            border: none;
+            padding: 10px;
+            cursor: pointer;
+            z-index: 10;
+        }
+        
+        .carousel-btn.prev {
+            left: 10px;
+        }
+        
+        .carousel-btn.next {
+            right: 10px;
+        }
+        
+        .admin-tab.active {
+            border-color: #3b82f6;
+            color: #3b82f6;
+        }
+        
+        .admin-content {
+            display: block;
+        }
+        
+        .admin-content.hidden {
+            display: none;
+        }
+    </style>
+</head>
+<body class="bg-gray-50">
+    <!-- Header -->
+    <header class="bg-white shadow-sm border-b border-gray-200">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between items-center h-16">
+                <div class="flex items-center">
+                    <svg class="h-8 w-auto text-blue-900" viewBox="0 0 200 40" fill="currentColor">
+                        <text x="10" y="28" font-family="Arial, sans-serif" font-size="18" font-weight="bold">Sharan Car Rental</text>
+                    </svg>
+                </div>
+                <nav class="hidden md:flex space-x-8">
+                    <a href="#home" class="text-gray-700 hover:text-blue-900 font-medium">Home</a>
+                    <a href="#cars" class="text-gray-700 hover:text-blue-900 font-medium">Cars</a>
+                    <a href="#pricing" class="text-gray-700 hover:text-blue-900 font-medium">Pricing</a>
+                    <a href="#admin" class="text-gray-700 hover:text-blue-900 font-medium">Admin</a>
+                </nav>
+                <button onclick="scrollToCars()" class="bg-blue-900 text-white px-6 py-2 rounded-lg hover:bg-blue-800 transition-colors">
+                    Book Now
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Hero Section -->
+    <section id="home" class="bg-gradient-to-r from-blue-900 to-blue-800 text-white py-20">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+            <h1 class="text-4xl md:text-6xl font-bold mb-6">Sharan Car Rental — Premium cars, hourly/daily/monthly rent</h1>
+            <p class="text-xl md:text-2xl mb-8 text-blue-100">Book Toyota Fortuner (2019), Fortuner Legender, Audi A7, Range Rover Sport, Scorpio-N & i20. Fuel not included.</p>
+            <button onclick="scrollToCars()" class="bg-white text-blue-900 px-8 py-3 rounded-lg text-lg font-semibold hover:bg-gray-100 transition-colors">
+                Check Availability
+            </button>
+        </div>
+    </section>
+
+    <!-- Cars Section -->
+    <section id="cars" class="py-16">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <h2 class="text-3xl font-bold text-gray-900 text-center mb-12">Our Premium Fleet</h2>
+            <div id="cars-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                <!-- Cars will be loaded here -->
+            </div>
+        </div>
+    </section>
+
+    <!-- Pricing Section -->
+    <section id="pricing" class="py-16 bg-white">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <h2 class="text-3xl font-bold text-gray-900 text-center mb-12">Pricing Plans</h2>
+            <div class="overflow-x-auto">
+                <table class="w-full bg-white rounded-lg shadow-lg overflow-hidden">
+                    <thead class="bg-blue-900 text-white">
+                        <tr>
+                            <th class="px-6 py-4 text-left">Car Model</th>
+                            <th class="px-6 py-4 text-center">1 Day</th>
+                            <th class="px-6 py-4 text-center">15 Days</th>
+                            <th class="px-6 py-4 text-center">30 Days</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-gray-200">
+                        <tr class="hover:bg-gray-50">
+                            <td class="px-6 py-4 font-medium">Audi A7</td>
+                            <td class="px-6 py-4 text-center">₹28,000</td>
+                            <td class="px-6 py-4 text-center">₹3,20,000</td>
+                            <td class="px-6 py-4 text-center">₹5,40,000</td>
+                        </tr>
+                        <tr class="hover:bg-gray-50">
+                            <td class="px-6 py-4 font-medium">Range Rover Sport</td>
+                            <td class="px-6 py-4 text-center">₹40,000</td>
+                            <td class="px-6 py-4 text-center">₹4,60,000</td>
+                            <td class="px-6 py-4 text-center">₹8,00,000</td>
+                        </tr>
+                        <tr class="hover:bg-gray-50">
+                            <td class="px-6 py-4 font-medium">Fortuner Legender</td>
+                            <td class="px-6 py-4 text-center">₹12,000</td>
+                            <td class="px-6 py-4 text-center">₹1,40,000</td>
+                            <td class="px-6 py-4 text-center">₹2,40,000</td>
+                        </tr>
+                        <tr class="hover:bg-gray-50">
+                            <td class="px-6 py-4 font-medium">Toyota Fortuner (2019)</td>
+                            <td class="px-6 py-4 text-center">₹9,000</td>
+                            <td class="px-6 py-4 text-center">₹1,05,000</td>
+                            <td class="px-6 py-4 text-center">₹1,80,000</td>
+                        </tr>
+                        <tr class="hover:bg-gray-50">
+                            <td class="px-6 py-4 font-medium">Mahindra Scorpio-N</td>
+                            <td class="px-6 py-4 text-center">₹7,000</td>
+                            <td class="px-6 py-4 text-center">₹85,000</td>
+                            <td class="px-6 py-4 text-center">₹1,50,000</td>
+                        </tr>
+                        <tr class="hover:bg-gray-50">
+                            <td class="px-6 py-4 font-medium">Hyundai i20 (Top)</td>
+                            <td class="px-6 py-4 text-center">₹3,000</td>
+                            <td class="px-6 py-4 text-center">₹35,000</td>
+                            <td class="px-6 py-4 text-center">₹60,000</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+            <p class="text-center text-gray-600 mt-4">*Fuel charges not included</p>
+        </div>
+    </section>
+
+    <!-- Admin Section -->
+    <section id="admin" class="py-16 bg-gray-50">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <h2 class="text-3xl font-bold text-gray-900 text-center mb-8">Admin Panel</h2>
+            
+            <div id="admin-login" class="bg-white rounded-lg shadow-lg p-8">
+                <h3 class="text-xl font-semibold mb-4">Admin Login</h3>
+                <div class="flex gap-4">
+                    <input type="password" id="admin-key" placeholder="Enter admin key" class="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                    <button onclick="adminLogin()" class="bg-blue-900 text-white px-6 py-2 rounded-lg hover:bg-blue-800">Login</button>
+                </div>
+            </div>
+
+            <div id="admin-panel" class="hidden">
+                <!-- Admin Navigation Tabs -->
+                <div class="bg-white rounded-lg shadow-lg mb-8">
+                    <div class="border-b border-gray-200">
+                        <nav class="flex space-x-8 px-6">
+                            <button onclick="showAdminTab('bookings')" id="tab-bookings" class="admin-tab active py-4 px-2 border-b-2 border-blue-500 text-blue-600 font-medium">
+                                📋 Bookings
+                            </button>
+                            <button onclick="showAdminTab('cars')" id="tab-cars" class="admin-tab py-4 px-2 border-b-2 border-transparent text-gray-500 hover:text-gray-700">
+                                🚗 Cars Management
+                            </button>
+                            <button onclick="showAdminTab('offers')" id="tab-offers" class="admin-tab py-4 px-2 border-b-2 border-transparent text-gray-500 hover:text-gray-700">
+                                🎁 Offers
+                            </button>
+                            <button onclick="showAdminTab('pricing')" id="tab-pricing" class="admin-tab py-4 px-2 border-b-2 border-transparent text-gray-500 hover:text-gray-700">
+                                💰 Pricing & Discounts
+                            </button>
+                            <button onclick="showAdminTab('calendar')" id="tab-calendar" class="admin-tab py-4 px-2 border-b-2 border-transparent text-gray-500 hover:text-gray-700">
+                                📅 Calendar
+                            </button>
+                        </nav>
+                    </div>
+                </div>
+
+                <!-- Bookings Tab -->
+                <div id="admin-bookings" class="admin-content">
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                        <div class="bg-white rounded-lg shadow-lg p-8">
+                            <div class="flex justify-between items-center mb-6">
+                                <h3 class="text-xl font-semibold">Bookings Management</h3>
+                                <button onclick="showBulkBookingModal()" class="bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700">
+                                    📅 Add Bulk Booking
+                                </button>
+                            </div>
+                            <div id="bookings-list">
+                                <!-- Bookings will be loaded here -->
+                            </div>
+                        </div>
+                        
+                        <div class="bg-white rounded-lg shadow-lg p-8">
+                            <h3 class="text-xl font-semibold mb-6">Quick Stats</h3>
+                            <div id="booking-stats" class="space-y-4">
+                                <!-- Stats will be loaded here -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Cars Management Tab -->
+                <div id="admin-cars" class="admin-content hidden">
+                    <div class="bg-white rounded-lg shadow-lg p-8">
+                        <div class="flex justify-between items-center mb-6">
+                            <h3 class="text-xl font-semibold">Cars Fleet Management</h3>
+                            <button onclick="showAddCarModal()" class="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700">
+                                ➕ Add New Car
+                            </button>
+                        </div>
+                        <div id="cars-management-list" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                            <!-- Cars management will be loaded here -->
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Offers Tab -->
+                <div id="admin-offers" class="admin-content hidden">
+                    <div class="bg-white rounded-lg shadow-lg p-8">
+                        <div class="flex justify-between items-center mb-6">
+                            <h3 class="text-xl font-semibold">Special Offers Management</h3>
+                            <button onclick="showAddOfferModal()" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700">
+                                🎁 Add Offer
+                            </button>
+                        </div>
+                        <div id="offers-list">
+                            <!-- Offers will be loaded here -->
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Pricing & Discounts Tab -->
+                <div id="admin-pricing" class="admin-content hidden">
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                        <div class="bg-white rounded-lg shadow-lg p-8">
+                            <h3 class="text-xl font-semibold mb-6">Update Car Prices</h3>
+                            <div class="mb-4">
+                                <select id="price-car-select" onchange="loadCarPricing()" class="w-full px-4 py-2 border border-gray-300 rounded-lg">
+                                    <option value="">Select Car to Update Prices</option>
+                                </select>
+                            </div>
+                            <div id="car-pricing-form" class="hidden">
+                                <!-- Pricing form will be loaded here -->
+                            </div>
+                        </div>
+                        
+                        <div class="bg-white rounded-lg shadow-lg p-8">
+                            <h3 class="text-xl font-semibold mb-6">Discount Management</h3>
+                            <div class="space-y-4">
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">Global Discount (%)</label>
+                                    <input type="number" id="global-discount" min="0" max="50" class="w-full px-4 py-2 border border-gray-300 rounded-lg">
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">Seasonal Discount (%)</label>
+                                    <input type="number" id="seasonal-discount" min="0" max="30" class="w-full px-4 py-2 border border-gray-300 rounded-lg">
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">Long Term Discount (30+ days) (%)</label>
+                                    <input type="number" id="longterm-discount" min="0" max="20" class="w-full px-4 py-2 border border-gray-300 rounded-lg">
+                                </div>
+                                <button onclick="updateDiscounts()" class="w-full bg-green-600 text-white py-2 rounded-lg hover:bg-green-700">
+                                    Update Discounts
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Calendar Tab -->
+                <div id="admin-calendar" class="admin-content hidden">
+                    <div class="bg-white rounded-lg shadow-lg p-8">
+                        <h3 class="text-xl font-semibold mb-6">Calendar View</h3>
+                        <div class="mb-4">
+                            <select id="calendar-car-select" onchange="loadCalendar()" class="w-full px-4 py-2 border border-gray-300 rounded-lg">
+                                <option value="">Select Car</option>
+                            </select>
+                        </div>
+                        <div id="calendar-view">
+                            <!-- Calendar will be loaded here -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Car Detail Modal -->
+    <div id="car-modal" class="modal">
+        <div class="bg-white rounded-lg max-w-4xl w-full mx-4 max-h-full overflow-y-auto">
+            <div class="p-6">
+                <div class="flex justify-between items-center mb-6">
+                    <h2 id="modal-car-name" class="text-2xl font-bold text-gray-900"></h2>
+                    <button onclick="closeModal()" class="text-gray-500 hover:text-gray-700 text-2xl">&times;</button>
+                </div>
+                
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                    <div>
+                        <div id="modal-car-images" class="image-carousel mb-4">
+                            <!-- Images will be loaded here -->
+                        </div>
+                        <div id="modal-car-specs" class="space-y-2">
+                            <!-- Specs will be loaded here -->
+                        </div>
+                    </div>
+                    
+                    <div class="bg-gray-50 p-6 rounded-lg">
+                        <h3 class="text-xl font-semibold mb-4">Book This Car</h3>
+                        
+                        <div class="space-y-4">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Pickup City</label>
+                                <select id="booking-city" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                                    <option value="">Select City</option>
+                                    <option value="Banga">Banga</option>
+                                    <option value="Jalandhar">Jalandhar</option>
+                                    <option value="Hoshiarpur">Hoshiarpur</option>
+                                    <option value="Amritsar">Amritsar</option>
+                                </select>
+                            </div>
+                            
+                            <div class="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">Start Date</label>
+                                    <input type="date" id="start-date" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 date-picker">
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">End Date</label>
+                                    <input type="date" id="end-date" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 date-picker">
+                                </div>
+                            </div>
+                            
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Customer Details</label>
+                                <input type="text" id="customer-name" placeholder="Full Name" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 mb-2">
+                                <input type="tel" id="customer-phone" placeholder="Phone Number" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                            </div>
+                            
+                            <div id="price-breakdown" class="bg-white p-4 rounded-lg border hidden">
+                                <!-- Price breakdown will be shown here -->
+                            </div>
+                            
+                            <button onclick="checkAvailability()" id="check-availability-btn" class="w-full bg-blue-900 text-white py-3 rounded-lg hover:bg-blue-800 transition-colors">
+                                Check Availability
+                            </button>
+                            
+                            <button onclick="confirmBooking()" id="confirm-booking-btn" class="w-full bg-green-600 text-white py-3 rounded-lg hover:bg-green-700 transition-colors hidden">
+                                Confirm Booking
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add Car Modal -->
+    <div id="add-car-modal" class="modal">
+        <div class="bg-white rounded-lg max-w-2xl w-full mx-4 max-h-full overflow-y-auto">
+            <div class="p-6">
+                <div class="flex justify-between items-center mb-6">
+                    <h2 class="text-2xl font-bold text-gray-900">Add New Car</h2>
+                    <button onclick="closeAddCarModal()" class="text-gray-500 hover:text-gray-700 text-2xl">&times;</button>
+                </div>
+                
+                <form id="add-car-form" class="space-y-4">
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Car Name</label>
+                            <input type="text" id="new-car-name" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Color</label>
+                            <input type="text" id="new-car-color" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                        </div>
+                    </div>
+                    
+                    <div class="grid grid-cols-3 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">1-Day Price (₹)</label>
+                            <input type="number" id="new-car-price-1" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">15-Day Price (₹)</label>
+                            <input type="number" id="new-car-price-15" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">30-Day Price (₹)</label>
+                            <input type="number" id="new-car-price-30" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                        </div>
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Features (comma-separated)</label>
+                        <input type="text" id="new-car-features" placeholder="Luxury Sedan, Premium Interior, Advanced Safety" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Specifications (comma-separated)</label>
+                        <textarea id="new-car-specs" placeholder="Engine: 3.0L V6, Transmission: Automatic, Seating: 5 passengers, Fuel Type: Petrol" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 h-20"></textarea>
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Car Images</label>
+                        <input type="file" id="new-car-images" multiple accept="image/*" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                        <p class="text-sm text-gray-600 mt-1">Select multiple images. They will be converted to base64 for storage.</p>
+                    </div>
+                    
+                    <div class="flex gap-4 pt-4">
+                        <button type="button" onclick="closeAddCarModal()" class="flex-1 bg-gray-300 text-gray-700 py-2 rounded-lg hover:bg-gray-400">
+                            Cancel
+                        </button>
+                        <button type="submit" class="flex-1 bg-blue-900 text-white py-2 rounded-lg hover:bg-blue-800">
+                            Add Car
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Edit Car Modal -->
+    <div id="edit-car-modal" class="modal">
+        <div class="bg-white rounded-lg max-w-2xl w-full mx-4 max-h-full overflow-y-auto">
+            <div class="p-6">
+                <div class="flex justify-between items-center mb-6">
+                    <h2 class="text-2xl font-bold text-gray-900">Edit Car</h2>
+                    <button onclick="closeEditCarModal()" class="text-gray-500 hover:text-gray-700 text-2xl">&times;</button>
+                </div>
+                
+                <form id="edit-car-form" class="space-y-4">
+                    <input type="hidden" id="edit-car-id">
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Car Name</label>
+                            <input type="text" id="edit-car-name" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Color</label>
+                            <input type="text" id="edit-car-color" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                        </div>
+                    </div>
+                    
+                    <div class="grid grid-cols-3 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">1-Day Price (₹)</label>
+                            <input type="number" id="edit-car-price-1" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">15-Day Price (₹)</label>
+                            <input type="number" id="edit-car-price-15" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">30-Day Price (₹)</label>
+                            <input type="number" id="edit-car-price-30" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                        </div>
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Features (comma-separated)</label>
+                        <input type="text" id="edit-car-features" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Specifications (comma-separated)</label>
+                        <textarea id="edit-car-specs" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 h-20"></textarea>
+                    </div>
+                    
+                    <div class="flex gap-4 pt-4">
+                        <button type="button" onclick="closeEditCarModal()" class="flex-1 bg-gray-300 text-gray-700 py-2 rounded-lg hover:bg-gray-400">
+                            Cancel
+                        </button>
+                        <button type="submit" class="flex-1 bg-blue-900 text-white py-2 rounded-lg hover:bg-blue-800">
+                            Update Car
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bulk Booking Modal -->
+    <div id="bulk-booking-modal" class="modal">
+        <div class="bg-white rounded-lg max-w-lg w-full mx-4">
+            <div class="p-6">
+                <div class="flex justify-between items-center mb-6">
+                    <h2 class="text-2xl font-bold text-gray-900">Add Bulk Booking</h2>
+                    <button onclick="closeBulkBookingModal()" class="text-gray-500 hover:text-gray-700 text-2xl">&times;</button>
+                </div>
+                
+                <form id="bulk-booking-form" class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Select Car</label>
+                        <select id="bulk-car-select" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                            <option value="">Choose Car</option>
+                        </select>
+                    </div>
+                    
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Start Date</label>
+                            <input type="date" id="bulk-start-date" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">End Date</label>
+                            <input type="date" id="bulk-end-date" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                        </div>
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Customer Name</label>
+                        <input type="text" id="bulk-customer-name" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Customer Phone</label>
+                        <input type="tel" id="bulk-customer-phone" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Pickup City</label>
+                        <select id="bulk-city" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                            <option value="">Select City</option>
+                            <option value="Banga">Banga</option>
+                            <option value="Jalandhar">Jalandhar</option>
+                            <option value="Hoshiarpur">Hoshiarpur</option>
+                            <option value="Amritsar">Amritsar</option>
+                        </select>
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Notes (Optional)</label>
+                        <textarea id="bulk-notes" placeholder="Long term booking, special requirements, etc." class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 h-20"></textarea>
+                    </div>
+                    
+                    <div class="flex gap-4 pt-4">
+                        <button type="button" onclick="closeBulkBookingModal()" class="flex-1 bg-gray-300 text-gray-700 py-2 rounded-lg hover:bg-gray-400">
+                            Cancel
+                        </button>
+                        <button type="submit" class="flex-1 bg-purple-600 text-white py-2 rounded-lg hover:bg-purple-700">
+                            Create Booking
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Update Car Images Modal -->
+    <div id="update-images-modal" class="modal">
+        <div class="bg-white rounded-lg max-w-2xl w-full mx-4 max-h-full overflow-y-auto">
+            <div class="p-6">
+                <div class="flex justify-between items-center mb-6">
+                    <h2 class="text-2xl font-bold text-gray-900">Update Car Images</h2>
+                    <button onclick="closeUpdateImagesModal()" class="text-gray-500 hover:text-gray-700 text-2xl">&times;</button>
+                </div>
+                
+                <div id="current-images" class="mb-6">
+                    <h3 class="text-lg font-semibold mb-3">Current Images</h3>
+                    <div id="current-images-grid" class="grid grid-cols-2 md:grid-cols-3 gap-4">
+                        <!-- Current images will be loaded here -->
+                    </div>
+                </div>
+                
+                <form id="update-images-form" class="space-y-4">
+                    <input type="hidden" id="update-images-car-id">
+                    
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Add New Images</label>
+                        <input type="file" id="new-images-input" multiple accept="image/*" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                        <p class="text-sm text-gray-600 mt-1">Select multiple images to add. Existing images will be kept unless removed.</p>
+                    </div>
+                    
+                    <div class="flex gap-4 pt-4">
+                        <button type="button" onclick="closeUpdateImagesModal()" class="flex-1 bg-gray-300 text-gray-700 py-2 rounded-lg hover:bg-gray-400">
+                            Cancel
+                        </button>
+                        <button type="submit" class="flex-1 bg-green-600 text-white py-2 rounded-lg hover:bg-green-700">
+                            Update Images
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add Offer Modal -->
+    <div id="add-offer-modal" class="modal">
+        <div class="bg-white rounded-lg max-w-lg w-full mx-4">
+            <div class="p-6">
+                <div class="flex justify-between items-center mb-6">
+                    <h2 class="text-2xl font-bold text-gray-900">Add Special Offer</h2>
+                    <button onclick="closeAddOfferModal()" class="text-gray-500 hover:text-gray-700 text-2xl">&times;</button>
+                </div>
+                
+                <form id="add-offer-form" class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Offer Title</label>
+                        <input type="text" id="offer-title" required placeholder="e.g., Weekend Special, Festival Offer" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Offer Description</label>
+                        <textarea id="offer-description" required placeholder="Describe the offer details..." class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 h-20"></textarea>
+                    </div>
+                    
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Discount (%)</label>
+                            <input type="number" id="offer-discount" required min="1" max="50" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Valid Days</label>
+                            <input type="number" id="offer-validity" required min="1" max="365" placeholder="Days" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                        </div>
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Applicable Cars</label>
+                        <select id="offer-cars" multiple class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 h-24">
+                            <!-- Cars will be loaded here -->
+                        </select>
+                        <p class="text-sm text-gray-600 mt-1">Hold Ctrl/Cmd to select multiple cars</p>
+                    </div>
+                    
+                    <div class="flex gap-4 pt-4">
+                        <button type="button" onclick="closeAddOfferModal()" class="flex-1 bg-gray-300 text-gray-700 py-2 rounded-lg hover:bg-gray-400">
+                            Cancel
+                        </button>
+                        <button type="submit" class="flex-1 bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700">
+                            Add Offer
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- WhatsApp Float Button -->
+    <a href="https://wa.me/917973418735?text=Hello! I'm interested in renting a car from Sharan Car Rental." target="_blank" rel="noopener noreferrer" class="whatsapp-float" title="Contact via WhatsApp">
+        <svg class="w-8 h-8 mt-4" fill="currentColor" viewBox="0 0 24 24">
+            <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893A11.821 11.821 0 0020.885 3.488"/>
+        </svg>
+    </a>
+
+    <script>
+        // Firebase Configuration
+        const firebaseConfig = {
+            apiKey: "AIzaSyC30TcmMVhP_8HdFYS1WufRiZwSDYNMTF0",
+            authDomain: "pulse2-92372.firebaseapp.com",
+            databaseURL: "https://pulse2-92372-default-rtdb.firebaseio.com",
+            projectId: "pulse2-92372",
+            storageBucket: "pulse2-92372.firebasestorage.app",
+            messagingSenderId: "276235725177",
+            appId: "1:276235725177:web:0f4e0789fae80a435927a8"
+        };
+
+        // Initialize Firebase
+        firebase.initializeApp(firebaseConfig);
+        const database = firebase.database();
+
+        // Car Data
+        let cars = [
+            {
+                id: 'audi-a7',
+                name: 'Audi A7',
+                color: 'White',
+                images: ['https://pulse.oriontec.xyz/IMG_2844.jpeg'],
+                price: { 1: 28000, 15: 320000, 30: 540000 },
+                features: ['Luxury Sedan', 'Premium Interior', 'Advanced Safety'],
+                specs: ['Engine: 3.0L V6', 'Transmission: Automatic', 'Seating: 5 passengers', 'Fuel Type: Petrol']
+            },
+            {
+                id: 'scorpio-n',
+                name: 'Mahindra Scorpio-N',
+                color: 'Black',
+                images: ['https://pulse.oriontec.xyz/IMG_2845.jpeg'],
+                price: { 1: 7000, 15: 85000, 30: 150000 },
+                features: ['7-Seater SUV', '4WD Capability', 'Rugged Design'],
+                specs: ['Engine: 2.2L Diesel', 'Transmission: Manual/Auto', 'Seating: 7 passengers', 'Fuel Type: Diesel']
+            },
+            {
+                id: 'fortuner-legender',
+                name: 'Fortuner Legender',
+                color: 'White',
+                images: ['https://pulse.oriontec.xyz/IMG_2846.jpeg'],
+                price: { 1: 12000, 15: 140000, 30: 240000 },
+                features: ['Premium SUV', 'Advanced Features', 'Sporty Design'],
+                specs: ['Engine: 2.8L Diesel', 'Transmission: Automatic', 'Seating: 7 passengers', 'Fuel Type: Diesel']
+            },
+            {
+                id: 'i20',
+                name: 'Hyundai i20 (Top)',
+                color: 'White',
+                images: ['https://pulse.oriontec.xyz/IMG_2847.jpeg'],
+                price: { 1: 3000, 15: 35000, 30: 60000 },
+                features: ['Compact Hatchback', 'Fuel Efficient', 'City Friendly'],
+                specs: ['Engine: 1.2L Petrol', 'Transmission: Manual/Auto', 'Seating: 5 passengers', 'Fuel Type: Petrol']
+            },
+            {
+                id: 'fortuner-2019',
+                name: 'Toyota Fortuner (2019)',
+                color: 'White',
+                images: [
+                    'https://pulse.oriontec.xyz/IMG_9757.jpeg',
+                    'https://pulse.oriontec.xyz/IMG_9758.jpeg',
+                    'https://pulse.oriontec.xyz/IMG_9866.jpeg'
+                ],
+                price: { 1: 9000, 15: 105000, 30: 180000 },
+                features: ['Reliable SUV', '4WD Available', 'Spacious Interior'],
+                specs: ['Engine: 2.8L Diesel', 'Transmission: Manual/Auto', 'Seating: 7 passengers', 'Fuel Type: Diesel']
+            },
+            {
+                id: 'range-rover-sport',
+                name: 'Range Rover Sport',
+                color: 'White/Black',
+                images: [
+                    'https://pulse.oriontec.xyz/IMG_1892.jpeg',
+                    'https://pulse.oriontec.xyz/IMG_2165.jpeg'
+                ],
+                price: { 1: 40000, 15: 460000, 30: 800000 },
+                features: ['Ultra Luxury SUV', 'Premium Features', 'Off-road Capable'],
+                specs: ['Engine: 3.0L V6', 'Transmission: Automatic', 'Seating: 5 passengers', 'Fuel Type: Petrol']
+            }
+        ];
+
+        let currentCar = null;
+        let currentImageIndex = 0;
+        let discounts = { global: 0, seasonal: 0, longterm: 0 };
+
+        // Initialize the app
+        document.addEventListener('DOMContentLoaded', function() {
+            initializeFirebaseListeners();
+            setMinDate();
+            loadDiscounts();
+        });
+
+        // Initialize Firebase real-time listeners
+        function initializeFirebaseListeners() {
+            // First load default cars, then listen for Firebase changes
+            loadCars();
+            
+            // Listen for cars changes
+            database.ref('cars').on('value', (snapshot) => {
+                const carsData = snapshot.val();
+                if (carsData && Object.keys(carsData).length > 0) {
+                    // Convert Firebase object to array with proper structure
+                    cars = Object.keys(carsData).map(key => ({
+                        id: key,
+                        ...carsData[key]
+                    }));
+                    loadCars();
+                } else {
+                    // Keep default cars if Firebase is empty and load them
+                    console.log('No cars in Firebase, using default cars');
+                    loadCars();
+                }
+                
+                // Update admin panels if visible
+                if (!document.getElementById('admin-panel').classList.contains('hidden')) {
+                    loadCarsManagement();
+                    loadPricingTab();
+                    loadCalendarTab();
+                }
+            });
+
+            // Listen for bookings changes
+            database.ref('bookings').on('value', (snapshot) => {
+                // Update admin bookings if visible
+                if (!document.getElementById('admin-panel').classList.contains('hidden')) {
+                    loadBookings();
+                }
+            });
+
+            // Listen for offers changes
+            database.ref('offers').on('value', (snapshot) => {
+                // Update admin offers if visible
+                if (!document.getElementById('admin-panel').classList.contains('hidden')) {
+                    loadOffers();
+                }
+            });
+
+            // Listen for discounts changes
+            database.ref('discounts').on('value', (snapshot) => {
+                const data = snapshot.val();
+                if (data) {
+                    discounts = data;
+                }
+            });
+        }
+
+        // Admin Tab Management
+        function showAdminTab(tabName) {
+            // Hide all tabs
+            document.querySelectorAll('.admin-content').forEach(content => {
+                content.classList.add('hidden');
+            });
+            
+            // Remove active class from all tabs
+            document.querySelectorAll('.admin-tab').forEach(tab => {
+                tab.classList.remove('active', 'border-blue-500', 'text-blue-600');
+                tab.classList.add('border-transparent', 'text-gray-500');
+            });
+            
+            // Show selected tab
+            document.getElementById(`admin-${tabName}`).classList.remove('hidden');
+            
+            // Add active class to selected tab
+            const activeTab = document.getElementById(`tab-${tabName}`);
+            activeTab.classList.add('active', 'border-blue-500', 'text-blue-600');
+            activeTab.classList.remove('border-transparent', 'text-gray-500');
+            
+            // Load content based on tab
+            switch(tabName) {
+                case 'bookings':
+                    loadBookings();
+                    break;
+                case 'cars':
+                    loadCarsManagement();
+                    break;
+                case 'offers':
+                    loadOffers();
+                    break;
+                case 'pricing':
+                    loadPricingTab();
+                    break;
+                case 'calendar':
+                    loadCalendarTab();
+                    break;
+            }
+        }
+
+        // Load cars into grid
+        function loadCars() {
+            const carsGrid = document.getElementById('cars-grid');
+            carsGrid.innerHTML = '';
+
+            cars.forEach(car => {
+                const carCard = document.createElement('div');
+                carCard.className = 'car-card bg-white rounded-lg shadow-lg overflow-hidden cursor-pointer';
+                carCard.onclick = () => openCarModal(car);
+
+                carCard.innerHTML = `
+                    <div class="aspect-w-16 aspect-h-9">
+                        <img src="${car.images[0]}" alt="${car.name}" class="w-full h-48 object-cover" onerror="this.src=''; this.alt='Image failed to load'; this.style.display='none';">
+                    </div>
+                    <div class="p-6">
+                        <h3 class="text-xl font-semibold text-gray-900 mb-2">${car.name}</h3>
+                        <p class="text-gray-600 mb-3">${car.color}</p>
+                        <div class="flex justify-between items-center mb-4">
+                            <span class="text-2xl font-bold text-blue-900">₹${car.price[1].toLocaleString()}</span>
+                            <span class="text-gray-500">per day</span>
+                        </div>
+                        <div class="space-y-1 mb-4">
+                            ${car.features.map(feature => `<span class="inline-block bg-gray-100 text-gray-700 px-2 py-1 rounded text-sm mr-2">${feature}</span>`).join('')}
+                        </div>
+                        <button class="w-full bg-blue-900 text-white py-2 rounded-lg hover:bg-blue-800 transition-colors">
+                            View Details
+                        </button>
+                    </div>
+                `;
+
+                carsGrid.appendChild(carCard);
+            });
+        }
+
+        // Load cars management
+        function loadCarsManagement() {
+            const carsList = document.getElementById('cars-management-list');
+            carsList.innerHTML = '';
+
+            if (!cars || cars.length === 0) {
+                carsList.innerHTML = '<p class="text-gray-600 col-span-3">No cars found in the system.</p>';
+                return;
+            }
+
+            cars.forEach(car => {
+                const carCard = document.createElement('div');
+                carCard.className = 'bg-gray-50 rounded-lg p-4 border';
+                carCard.innerHTML = `
+                    <div class="mb-3">
+                        <img src="${car.images && car.images[0] ? car.images[0] : 'https://via.placeholder.com/300x200?text=No+Image'}" 
+                             alt="${car.name}" 
+                             class="w-full h-32 object-cover rounded-lg mb-2"
+                             onerror="this.src='https://via.placeholder.com/300x200?text=No+Image';">
+                    </div>
+                    <div class="flex justify-between items-start mb-3">
+                        <div>
+                            <h4 class="font-semibold text-lg">${car.name}</h4>
+                            <p class="text-gray-600">${car.color}</p>
+                            <p class="text-xs text-gray-500">ID: ${car.id}</p>
+                        </div>
+                        <div class="flex flex-col gap-2">
+                            <button onclick="editCar('${car.id}')" class="bg-blue-600 text-white px-3 py-1 rounded text-sm hover:bg-blue-700">
+                                ✏️ Edit
+                            </button>
+                            <button onclick="updateCarImages('${car.id}')" class="bg-green-600 text-white px-3 py-1 rounded text-sm hover:bg-green-700">
+                                🖼️ Images
+                            </button>
+                            <button onclick="deleteCar('${car.id}')" class="bg-red-600 text-white px-3 py-1 rounded text-sm hover:bg-red-700">
+                                🗑️ Delete
+                            </button>
+                        </div>
+                    </div>
+                    <div class="text-sm text-gray-600">
+                        <p>1 Day: ₹${car.price && car.price[1] ? car.price[1].toLocaleString() : 'N/A'}</p>
+                        <p>15 Days: ₹${car.price && car.price[15] ? car.price[15].toLocaleString() : 'N/A'}</p>
+                        <p>30 Days: ₹${car.price && car.price[30] ? car.price[30].toLocaleString() : 'N/A'}</p>
+                        <p class="mt-2">Images: ${car.images ? car.images.length : 0}</p>
+                    </div>
+                `;
+                carsList.appendChild(carCard);
+            });
+        }
+
+        // Edit car function
+        function editCar(carId) {
+            const car = cars.find(c => c.id === carId);
+            if (!car) return;
+
+            document.getElementById('edit-car-id').value = car.id;
+            document.getElementById('edit-car-name').value = car.name;
+            document.getElementById('edit-car-color').value = car.color;
+            document.getElementById('edit-car-price-1').value = car.price[1];
+            document.getElementById('edit-car-price-15').value = car.price[15];
+            document.getElementById('edit-car-price-30').value = car.price[30];
+            document.getElementById('edit-car-features').value = car.features.join(', ');
+            document.getElementById('edit-car-specs').value = car.specs.join(', ');
+
+            document.getElementById('edit-car-modal').classList.add('active');
+        }
+
+        // Delete car function
+        async function deleteCar(carId) {
+            if (!confirm('Are you sure you want to delete this car?')) return;
+
+            try {
+                // Remove from Firebase - real-time listener will update UI automatically
+                await database.ref('cars/' + carId).remove();
+                alert('Car deleted successfully!');
+            } catch (error) {
+                console.error('Error deleting car:', error);
+                alert('Error deleting car');
+            }
+        }
+
+        // Load offers
+        async function loadOffers() {
+            try {
+                const offersRef = database.ref('offers');
+                const snapshot = await offersRef.once('value');
+                const offers = snapshot.val() || {};
+
+                const offersList = document.getElementById('offers-list');
+                offersList.innerHTML = '';
+
+                if (Object.keys(offers).length === 0) {
+                    offersList.innerHTML = '<p class="text-gray-600">No special offers found.</p>';
+                    return;
+                }
+
+                Object.values(offers).forEach(offer => {
+                    const isActive = new Date(offer.expiryDate) > new Date();
+                    const offerDiv = document.createElement('div');
+                    offerDiv.className = `border border-gray-200 rounded-lg p-4 mb-4 ${isActive ? 'bg-green-50' : 'bg-gray-50'}`;
+                    offerDiv.innerHTML = `
+                        <div class="flex justify-between items-start">
+                            <div>
+                                <h4 class="font-semibold text-lg">${offer.title}</h4>
+                                <p class="text-gray-600">${offer.description}</p>
+                                <p class="text-gray-600">Discount: ${offer.discount}%</p>
+                                <p class="text-gray-600">Valid until: ${new Date(offer.expiryDate).toLocaleDateString()}</p>
+                                <p class="text-gray-600">Applicable cars: ${offer.applicableCars.join(', ')}</p>
+                                <span class="inline-block px-2 py-1 rounded text-sm ${isActive ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}">
+                                    ${isActive ? 'Active' : 'Expired'}
+                                </span>
+                            </div>
+                            <button onclick="deleteOffer('${offer.id}')" class="bg-red-600 text-white px-3 py-1 rounded text-sm hover:bg-red-700">
+                                Remove
+                            </button>
+                        </div>
+                    `;
+                    offersList.appendChild(offerDiv);
+                });
+
+            } catch (error) {
+                console.error('Error loading offers:', error);
+                document.getElementById('offers-list').innerHTML = '<p class="text-red-600">Error loading offers.</p>';
+            }
+        }
+
+        // Delete offer
+        async function deleteOffer(offerId) {
+            if (!confirm('Are you sure you want to remove this offer?')) return;
+
+            try {
+                await database.ref('offers/' + offerId).remove();
+                alert('Offer removed successfully!');
+            } catch (error) {
+                console.error('Error removing offer:', error);
+                alert('Error removing offer');
+            }
+        }
+
+        // Load pricing tab
+        function loadPricingTab() {
+            const priceCarSelect = document.getElementById('price-car-select');
+            priceCarSelect.innerHTML = '<option value="">Select Car to Update Prices</option>';
+            
+            cars.forEach(car => {
+                priceCarSelect.innerHTML += `<option value="${car.id}">${car.name}</option>`;
+            });
+
+            // Load current discounts
+            document.getElementById('global-discount').value = discounts.global;
+            document.getElementById('seasonal-discount').value = discounts.seasonal;
+            document.getElementById('longterm-discount').value = discounts.longterm;
+        }
+
+        // Load car pricing form
+        function loadCarPricing() {
+            const carId = document.getElementById('price-car-select').value;
+            const car = cars.find(c => c.id === carId);
+            
+            if (!car) {
+                document.getElementById('car-pricing-form').classList.add('hidden');
+                return;
+            }
+
+            document.getElementById('car-pricing-form').innerHTML = `
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">1-Day Price (₹)</label>
+                        <input type="number" id="update-price-1" value="${car.price[1]}" class="w-full px-4 py-2 border border-gray-300 rounded-lg">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">15-Day Price (₹)</label>
+                        <input type="number" id="update-price-15" value="${car.price[15]}" class="w-full px-4 py-2 border border-gray-300 rounded-lg">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">30-Day Price (₹)</label>
+                        <input type="number" id="update-price-30" value="${car.price[30]}" class="w-full px-4 py-2 border border-gray-300 rounded-lg">
+                    </div>
+                    <button onclick="updateCarPricing('${carId}')" class="w-full bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700">
+                        Update Prices
+                    </button>
+                </div>
+            `;
+            document.getElementById('car-pricing-form').classList.remove('hidden');
+        }
+
+        // Update car pricing
+        async function updateCarPricing(carId) {
+            const price1 = parseInt(document.getElementById('update-price-1').value);
+            const price15 = parseInt(document.getElementById('update-price-15').value);
+            const price30 = parseInt(document.getElementById('update-price-30').value);
+
+            try {
+                // Update in Firebase - real-time listener will update UI automatically
+                await database.ref('cars/' + carId + '/price').set({
+                    1: price1,
+                    15: price15,
+                    30: price30
+                });
+
+                alert('Prices updated successfully!');
+            } catch (error) {
+                console.error('Error updating prices:', error);
+                alert('Error updating prices');
+            }
+        }
+
+        // Update discounts
+        async function updateDiscounts() {
+            const globalDiscount = parseInt(document.getElementById('global-discount').value) || 0;
+            const seasonalDiscount = parseInt(document.getElementById('seasonal-discount').value) || 0;
+            const longtermDiscount = parseInt(document.getElementById('longterm-discount').value) || 0;
+
+            try {
+                await database.ref('discounts').set({
+                    global: globalDiscount,
+                    seasonal: seasonalDiscount,
+                    longterm: longtermDiscount
+                });
+
+                discounts = { global: globalDiscount, seasonal: seasonalDiscount, longterm: longtermDiscount };
+                alert('Discounts updated successfully!');
+            } catch (error) {
+                console.error('Error updating discounts:', error);
+                alert('Error updating discounts');
+            }
+        }
+
+        // Load discounts
+        async function loadDiscounts() {
+            try {
+                const discountsRef = database.ref('discounts');
+                const snapshot = await discountsRef.once('value');
+                const data = snapshot.val();
+                if (data) {
+                    discounts = data;
+                }
+            } catch (error) {
+                console.error('Error loading discounts:', error);
+            }
+        }
+
+        // Load calendar tab
+        function loadCalendarTab() {
+            const calendarSelect = document.getElementById('calendar-car-select');
+            calendarSelect.innerHTML = '<option value="">Select Car</option>';
+            cars.forEach(car => {
+                calendarSelect.innerHTML += `<option value="${car.id}">${car.name}</option>`;
+            });
+        }
+
+        // Bulk booking functions
+        function showBulkBookingModal() {
+            const bulkCarSelect = document.getElementById('bulk-car-select');
+            bulkCarSelect.innerHTML = '<option value="">Choose Car</option>';
+            cars.forEach(car => {
+                bulkCarSelect.innerHTML += `<option value="${car.id}">${car.name}</option>`;
+            });
+            
+            // Set minimum date
+            const today = new Date().toISOString().split('T')[0];
+            document.getElementById('bulk-start-date').min = today;
+            document.getElementById('bulk-end-date').min = today;
+            
+            document.getElementById('bulk-booking-modal').classList.add('active');
+        }
+
+        function closeBulkBookingModal() {
+            document.getElementById('bulk-booking-modal').classList.remove('active');
+            document.getElementById('bulk-booking-form').reset();
+        }
+
+        // Handle bulk booking form
+        document.getElementById('bulk-booking-form').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const carId = document.getElementById('bulk-car-select').value;
+            const startDate = document.getElementById('bulk-start-date').value;
+            const endDate = document.getElementById('bulk-end-date').value;
+            const customerName = document.getElementById('bulk-customer-name').value;
+            const customerPhone = document.getElementById('bulk-customer-phone').value;
+            const city = document.getElementById('bulk-city').value;
+            const notes = document.getElementById('bulk-notes').value;
+
+            if (new Date(startDate) >= new Date(endDate)) {
+                alert('End date must be after start date');
+                return;
+            }
+
+            try {
+                const car = cars.find(c => c.id === carId);
+                const bookingId = Date.now().toString();
+                const days = Math.ceil((new Date(endDate) - new Date(startDate)) / (1000 * 60 * 60 * 24));
+                
+                // Calculate price with discounts
+                let totalPrice = 0;
+                let packageType = '';
+                
+                if (days === 1) {
+                    totalPrice = car.price[1];
+                    packageType = 'Daily Rate';
+                } else {
+                    const perDayFrom15 = car.price[15] / 15;
+                    const perDayFrom30 = car.price[30] / 30;
+                    const dailyRate = car.price[1];
+
+                    const option15 = perDayFrom15 * days;
+                    const option30 = perDayFrom30 * days;
+                    const optionDaily = dailyRate * days;
+
+                    if (option30 <= option15 && option30 <= optionDaily) {
+                        totalPrice = option30;
+                        packageType = '30-Day Package (Pro-rated)';
+                    } else if (option15 <= optionDaily) {
+                        totalPrice = option15;
+                        packageType = '15-Day Package (Pro-rated)';
+                    } else {
+                        totalPrice = optionDaily;
+                        packageType = 'Daily Rate';
+                    }
+                }
+
+                // Apply discounts
+                if (days >= 30 && discounts.longterm > 0) {
+                    totalPrice = totalPrice * (1 - discounts.longterm / 100);
+                }
+                if (discounts.global > 0) {
+                    totalPrice = totalPrice * (1 - discounts.global / 100);
+                }
+
+                const booking = {
+                    id: bookingId,
+                    carId: carId,
+                    carName: car.name,
+                    city: city,
+                    startDate: startDate,
+                    endDate: endDate,
+                    customerName: customerName,
+                    customerPhone: customerPhone,
+                    totalPrice: Math.round(totalPrice),
+                    packageType: packageType,
+                    days: days,
+                    notes: notes,
+                    status: 'confirmed',
+                    createdAt: new Date().toISOString(),
+                    createdBy: 'admin'
+                };
+
+                await database.ref('bookings/' + bookingId).set(booking);
+                alert('Bulk booking created successfully!');
+                closeBulkBookingModal();
+                loadBookings();
+
+            } catch (error) {
+                console.error('Error creating bulk booking:', error);
+                alert('Error creating booking');
+            }
+        });
+
+        // Offer functions
+        function showAddOfferModal() {
+            // Load cars in the select dropdown
+            const offerCarsSelect = document.getElementById('offer-cars');
+            offerCarsSelect.innerHTML = '';
+            cars.forEach(car => {
+                offerCarsSelect.innerHTML += `<option value="${car.name}">${car.name}</option>`;
+            });
+            
+            document.getElementById('add-offer-modal').classList.add('active');
+        }
+
+        function closeAddOfferModal() {
+            document.getElementById('add-offer-modal').classList.remove('active');
+            document.getElementById('add-offer-form').reset();
+        }
+
+        // Handle add offer form
+        document.getElementById('add-offer-form').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const title = document.getElementById('offer-title').value;
+            const description = document.getElementById('offer-description').value;
+            const discount = parseInt(document.getElementById('offer-discount').value);
+            const validity = parseInt(document.getElementById('offer-validity').value);
+            const selectedCars = Array.from(document.getElementById('offer-cars').selectedOptions).map(option => option.value);
+
+            if (selectedCars.length === 0) {
+                alert('Please select at least one car for this offer');
+                return;
+            }
+
+            try {
+                const offerId = Date.now().toString();
+                const expiryDate = new Date();
+                expiryDate.setDate(expiryDate.getDate() + validity);
+                
+                const offer = {
+                    id: offerId,
+                    title: title,
+                    description: description,
+                    discount: discount,
+                    validity: validity,
+                    expiryDate: expiryDate.toISOString(),
+                    applicableCars: selectedCars,
+                    createdAt: new Date().toISOString()
+                };
+
+                await database.ref('offers/' + offerId).set(offer);
+                alert('Special offer added successfully!');
+                closeAddOfferModal();
+
+            } catch (error) {
+                console.error('Error adding offer:', error);
+                alert('Error adding offer');
+            }
+        });
+
+        // Modal functions
+        function closeEditCarModal() {
+            document.getElementById('edit-car-modal').classList.remove('active');
+        }
+
+        // Handle edit car form
+        document.getElementById('edit-car-form').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const carId = document.getElementById('edit-car-id').value;
+            const name = document.getElementById('edit-car-name').value;
+            const color = document.getElementById('edit-car-color').value;
+            const price1 = parseInt(document.getElementById('edit-car-price-1').value);
+            const price15 = parseInt(document.getElementById('edit-car-price-15').value);
+            const price30 = parseInt(document.getElementById('edit-car-price-30').value);
+            const features = document.getElementById('edit-car-features').value.split(',').map(f => f.trim());
+            const specs = document.getElementById('edit-car-specs').value.split(',').map(s => s.trim());
+
+            try {
+                const updatedCar = {
+                    name: name,
+                    color: color,
+                    price: { 1: price1, 15: price15, 30: price30 },
+                    features: features,
+                    specs: specs
+                };
+
+                // Update in Firebase - real-time listener will update UI automatically
+                await database.ref('cars/' + carId).update(updatedCar);
+
+                alert('Car updated successfully!');
+                closeEditCarModal();
+
+            } catch (error) {
+                console.error('Error updating car:', error);
+                alert('Error updating car');
+            }
+        });
+
+        // Open car modal
+        function openCarModal(car) {
+            currentCar = car;
+            currentImageIndex = 0;
+            
+            document.getElementById('modal-car-name').textContent = car.name;
+            
+            // Load images
+            const imagesContainer = document.getElementById('modal-car-images');
+            imagesContainer.innerHTML = `
+                <div class="carousel-container" id="carousel-container">
+                    ${car.images.map((img, index) => `
+                        <img src="${img}" alt="${car.name}" class="w-full h-64 object-cover flex-shrink-0" style="min-width: 100%" onerror="this.src=''; this.alt='Image failed to load'; this.style.display='none';">
+                    `).join('')}
+                </div>
+                ${car.images.length > 1 ? `
+                    <button class="carousel-btn prev" onclick="prevImage()">‹</button>
+                    <button class="carousel-btn next" onclick="nextImage()">›</button>
+                ` : ''}
+            `;
+            
+            // Load specs
+            const specsContainer = document.getElementById('modal-car-specs');
+            specsContainer.innerHTML = `
+                <h4 class="font-semibold text-gray-900 mb-2">Specifications</h4>
+                ${car.specs.map(spec => `<p class="text-gray-600">${spec}</p>`).join('')}
+            `;
+            
+            // Reset form
+            document.getElementById('booking-city').value = '';
+            document.getElementById('start-date').value = '';
+            document.getElementById('end-date').value = '';
+            document.getElementById('customer-name').value = '';
+            document.getElementById('customer-phone').value = '';
+            document.getElementById('price-breakdown').classList.add('hidden');
+            document.getElementById('confirm-booking-btn').classList.add('hidden');
+            document.getElementById('check-availability-btn').classList.remove('hidden');
+            
+            document.getElementById('car-modal').classList.add('active');
+        }
+
+        // Close modal
+        function closeModal() {
+            document.getElementById('car-modal').classList.remove('active');
+        }
+
+        // Image carousel functions
+        function nextImage() {
+            if (currentCar && currentImageIndex < currentCar.images.length - 1) {
+                currentImageIndex++;
+                updateCarousel();
+            }
+        }
+
+        function prevImage() {
+            if (currentCar && currentImageIndex > 0) {
+                currentImageIndex--;
+                updateCarousel();
+            }
+        }
+
+        function updateCarousel() {
+            const container = document.getElementById('carousel-container');
+            container.style.transform = `translateX(-${currentImageIndex * 100}%)`;
+        }
+
+        // Set minimum date to today
+        function setMinDate() {
+            const today = new Date().toISOString().split('T')[0];
+            document.getElementById('start-date').min = today;
+            document.getElementById('end-date').min = today;
+        }
+
+        // Update end date minimum when start date changes
+        document.addEventListener('change', function(e) {
+            if (e.target.id === 'start-date') {
+                const startDate = e.target.value;
+                document.getElementById('end-date').min = startDate;
+                if (document.getElementById('end-date').value < startDate) {
+                    document.getElementById('end-date').value = '';
+                }
+            }
+        });
+
+        // Check availability
+        async function checkAvailability() {
+            const city = document.getElementById('booking-city').value;
+            const startDate = document.getElementById('start-date').value;
+            const endDate = document.getElementById('end-date').value;
+            const customerName = document.getElementById('customer-name').value;
+            const customerPhone = document.getElementById('customer-phone').value;
+
+            if (!city || !startDate || !endDate || !customerName || !customerPhone) {
+                alert('Please fill in all fields');
+                return;
+            }
+
+            if (new Date(startDate) >= new Date(endDate)) {
+                alert('End date must be after start date');
+                return;
+            }
+
+            const allowedCities = ['Banga', 'Jalandhar', 'Hoshiarpur', 'Amritsar'];
+            if (!allowedCities.includes(city)) {
+                alert('We don\'t serve this area. Available cities: ' + allowedCities.join(', '));
+                return;
+            }
+
+            // Show loading
+            const btn = document.getElementById('check-availability-btn');
+            btn.innerHTML = '<span class="loading"></span> Checking...';
+            btn.disabled = true;
+
+            try {
+                // Check for conflicts in Firebase
+                const bookingsRef = database.ref('bookings');
+                const snapshot = await bookingsRef.once('value');
+                const bookings = snapshot.val() || {};
+
+                const conflicts = Object.values(bookings).filter(booking => {
+                    if (booking.carId !== currentCar.id || booking.status === 'cancelled') {
+                        return false;
+                    }
+
+                    const bookingStart = new Date(booking.startDate);
+                    const bookingEnd = new Date(booking.endDate);
+                    const requestStart = new Date(startDate);
+                    const requestEnd = new Date(endDate);
+
+                    return (requestStart <= bookingEnd && requestEnd >= bookingStart);
+                });
+
+                if (conflicts.length > 0) {
+                    alert('Car is not available for the selected dates. Please choose different dates.');
+                    btn.innerHTML = 'Check Availability';
+                    btn.disabled = false;
+                    return;
+                }
+
+                // Calculate price with discounts
+                const days = Math.ceil((new Date(endDate) - new Date(startDate)) / (1000 * 60 * 60 * 24));
+                let totalPrice = 0;
+                let packageType = '';
+                let savings = 0;
+
+                if (days === 1) {
+                    totalPrice = currentCar.price[1];
+                    packageType = 'Daily Rate';
+                } else {
+                    const perDayFrom15 = currentCar.price[15] / 15;
+                    const perDayFrom30 = currentCar.price[30] / 30;
+                    const dailyRate = currentCar.price[1];
+
+                    const option15 = perDayFrom15 * days;
+                    const option30 = perDayFrom30 * days;
+                    const optionDaily = dailyRate * days;
+
+                    if (option30 <= option15 && option30 <= optionDaily) {
+                        totalPrice = option30;
+                        packageType = '30-Day Package (Pro-rated)';
+                        savings = optionDaily - option30;
+                    } else if (option15 <= optionDaily) {
+                        totalPrice = option15;
+                        packageType = '15-Day Package (Pro-rated)';
+                        savings = optionDaily - option15;
+                    } else {
+                        totalPrice = optionDaily;
+                        packageType = 'Daily Rate';
+                    }
+                }
+
+                // Apply discounts
+                let discountApplied = 0;
+                if (days >= 30 && discounts.longterm > 0) {
+                    discountApplied += discounts.longterm;
+                }
+                if (discounts.global > 0) {
+                    discountApplied += discounts.global;
+                }
+                
+                const originalPrice = totalPrice;
+                if (discountApplied > 0) {
+                    totalPrice = totalPrice * (1 - discountApplied / 100);
+                    savings += originalPrice - totalPrice;
+                }
+
+                // Show price breakdown
+                const priceBreakdown = document.getElementById('price-breakdown');
+                priceBreakdown.innerHTML = `
+                    <h4 class="font-semibold text-gray-900 mb-2">Price Breakdown</h4>
+                    <div class="flex justify-between">
+                        <span>Duration:</span>
+                        <span>${days} days</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span>Package:</span>
+                        <span>${packageType}</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span>Rate:</span>
+                        <span>₹${Math.round(totalPrice / days).toLocaleString()} per day</span>
+                    </div>
+                    ${discountApplied > 0 ? `
+                    <div class="flex justify-between text-green-600">
+                        <span>Discount Applied:</span>
+                        <span>${discountApplied}%</span>
+                    </div>
+                    ` : ''}
+                    ${savings > 0 ? `
+                    <div class="flex justify-between text-green-600">
+                        <span>Total Savings:</span>
+                        <span>₹${Math.round(savings).toLocaleString()}</span>
+                    </div>
+                    ` : ''}
+                    <div class="flex justify-between font-bold text-lg border-t pt-2 mt-2">
+                        <span>Total:</span>
+                        <span>₹${Math.round(totalPrice).toLocaleString()}</span>
+                    </div>
+                    <p class="text-sm text-gray-600 mt-2">*Fuel charges not included</p>
+                `;
+                priceBreakdown.classList.remove('hidden');
+
+                // Show confirm button
+                document.getElementById('confirm-booking-btn').classList.remove('hidden');
+                btn.classList.add('hidden');
+
+            } catch (error) {
+                console.error('Error checking availability:', error);
+                alert('Error checking availability. Please try again.');
+                btn.innerHTML = 'Check Availability';
+                btn.disabled = false;
+            }
+        }
+
+        // Confirm booking
+        async function confirmBooking() {
+            const city = document.getElementById('booking-city').value;
+            const startDate = document.getElementById('start-date').value;
+            const endDate = document.getElementById('end-date').value;
+            const customerName = document.getElementById('customer-name').value;
+            const customerPhone = document.getElementById('customer-phone').value;
+
+            const btn = document.getElementById('confirm-booking-btn');
+            btn.innerHTML = '<span class="loading"></span> Booking...';
+            btn.disabled = true;
+
+            try {
+                const bookingId = Date.now().toString();
+                
+                // Calculate detailed pricing with discounts
+                const days = Math.ceil((new Date(endDate) - new Date(startDate)) / (1000 * 60 * 60 * 24));
+                let totalPrice = 0;
+                let packageType = '';
+                let savings = 0;
+
+                if (days === 1) {
+                    totalPrice = currentCar.price[1];
+                    packageType = 'Daily Rate';
+                } else {
+                    const perDayFrom15 = currentCar.price[15] / 15;
+                    const perDayFrom30 = currentCar.price[30] / 30;
+                    const dailyRate = currentCar.price[1];
+
+                    const option15 = perDayFrom15 * days;
+                    const option30 = perDayFrom30 * days;
+                    const optionDaily = dailyRate * days;
+
+                    if (option30 <= option15 && option30 <= optionDaily) {
+                        totalPrice = option30;
+                        packageType = '30-Day Package (Pro-rated)';
+                        savings = optionDaily - option30;
+                    } else if (option15 <= optionDaily) {
+                        totalPrice = option15;
+                        packageType = '15-Day Package (Pro-rated)';
+                        savings = optionDaily - option15;
+                    } else {
+                        totalPrice = optionDaily;
+                        packageType = 'Daily Rate';
+                    }
+                }
+
+                // Apply discounts
+                let discountApplied = 0;
+                if (days >= 30 && discounts.longterm > 0) {
+                    discountApplied += discounts.longterm;
+                }
+                if (discounts.global > 0) {
+                    discountApplied += discounts.global;
+                }
+                
+                const originalPrice = totalPrice;
+                if (discountApplied > 0) {
+                    totalPrice = totalPrice * (1 - discountApplied / 100);
+                    savings += originalPrice - totalPrice;
+                }
+
+                const booking = {
+                    id: bookingId,
+                    carId: currentCar.id,
+                    carName: currentCar.name,
+                    city: city,
+                    startDate: startDate,
+                    endDate: endDate,
+                    customerName: customerName,
+                    customerPhone: customerPhone,
+                    totalPrice: Math.round(totalPrice),
+                    packageType: packageType,
+                    days: days,
+                    savings: Math.round(savings),
+                    discountApplied: discountApplied,
+                    status: 'pending',
+                    createdAt: new Date().toISOString()
+                };
+
+                await database.ref('bookings/' + bookingId).set(booking);
+
+                alert('Booking request submitted — we\'ll confirm on WhatsApp shortly.');
+                closeModal();
+
+                // Create detailed WhatsApp message
+                const formatDate = (dateStr) => {
+                    const date = new Date(dateStr);
+                    return date.toLocaleDateString('en-IN', { 
+                        weekday: 'short', 
+                        year: 'numeric', 
+                        month: 'short', 
+                        day: 'numeric' 
+                    });
+                };
+
+                let message = `🚗 *NEW BOOKING REQUEST*\n\n`;
+                message += `📋 *Booking ID:* ${bookingId}\n`;
+                message += `🚙 *Car:* ${currentCar.name} (${currentCar.color})\n`;
+                message += `📍 *City:* ${city}\n`;
+                message += `📅 *Duration:* ${days} days\n`;
+                message += `🗓️ *From:* ${formatDate(startDate)}\n`;
+                message += `🗓️ *To:* ${formatDate(endDate)}\n\n`;
+                
+                message += `👤 *Customer Details:*\n`;
+                message += `• Name: ${customerName}\n`;
+                message += `• Phone: ${customerPhone}\n\n`;
+                
+                message += `💰 *Pricing Details:*\n`;
+                message += `• Package: ${packageType}\n`;
+                message += `• Rate: ₹${Math.round(totalPrice / days).toLocaleString()} per day\n`;
+                if (discountApplied > 0) {
+                    message += `• Discount Applied: ${discountApplied}%\n`;
+                }
+                if (savings > 0) {
+                    message += `• Total Savings: ₹${savings.toLocaleString()}\n`;
+                }
+                message += `• *Total Amount: ₹${Math.round(totalPrice).toLocaleString()}*\n`;
+                message += `• (Fuel charges not included)\n\n`;
+                
+                message += `🔧 *Car Specifications:*\n`;
+                currentCar.specs.forEach(spec => {
+                    message += `• ${spec}\n`;
+                });
+                message += `\n`;
+                
+                message += `✨ *Features:*\n`;
+                currentCar.features.forEach(feature => {
+                    message += `• ${feature}\n`;
+                });
+                message += `\n`;
+                
+                message += `Please confirm this booking by replying with "CONFIRM ${bookingId}" or call the customer directly.`;
+
+                // Open WhatsApp with detailed message
+                window.open(`https://wa.me/917973418735?text=${encodeURIComponent(message)}`, '_blank', 'noopener,noreferrer');
+
+            } catch (error) {
+                console.error('Error creating booking:', error);
+                alert('Error creating booking. Please try again.');
+                btn.innerHTML = 'Confirm Booking';
+                btn.disabled = false;
+            }
+        }
+
+        // Admin functions
+        function adminLogin() {
+            const key = document.getElementById('admin-key').value;
+            if (key === 'admin123') {
+                document.getElementById('admin-login').classList.add('hidden');
+                document.getElementById('admin-panel').classList.remove('hidden');
+                showAdminTab('bookings');
+            } else {
+                alert('Invalid admin key');
+            }
+        }
+
+        async function loadBookings() {
+            try {
+                const bookingsRef = database.ref('bookings');
+                const snapshot = await bookingsRef.once('value');
+                const bookings = snapshot.val() || {};
+
+                const bookingsList = document.getElementById('bookings-list');
+                bookingsList.innerHTML = '';
+
+                if (Object.keys(bookings).length === 0) {
+                    bookingsList.innerHTML = '<p class="text-gray-600">No bookings found.</p>';
+                    return;
+                }
+
+                // Calculate stats
+                const totalBookings = Object.keys(bookings).length;
+                const confirmedBookings = Object.values(bookings).filter(b => b.status === 'confirmed').length;
+                const pendingBookings = Object.values(bookings).filter(b => b.status === 'pending').length;
+                const totalRevenue = Object.values(bookings)
+                    .filter(b => b.status === 'confirmed')
+                    .reduce((sum, b) => sum + (b.totalPrice || 0), 0);
+
+                // Update stats
+                document.getElementById('booking-stats').innerHTML = `
+                    <div class="bg-blue-50 p-4 rounded-lg">
+                        <h4 class="font-semibold text-blue-900">Total Bookings</h4>
+                        <p class="text-2xl font-bold text-blue-600">${totalBookings}</p>
+                    </div>
+                    <div class="bg-green-50 p-4 rounded-lg">
+                        <h4 class="font-semibold text-green-900">Confirmed</h4>
+                        <p class="text-2xl font-bold text-green-600">${confirmedBookings}</p>
+                    </div>
+                    <div class="bg-yellow-50 p-4 rounded-lg">
+                        <h4 class="font-semibold text-yellow-900">Pending</h4>
+                        <p class="text-2xl font-bold text-yellow-600">${pendingBookings}</p>
+                    </div>
+                    <div class="bg-purple-50 p-4 rounded-lg">
+                        <h4 class="font-semibold text-purple-900">Revenue</h4>
+                        <p class="text-2xl font-bold text-purple-600">₹${totalRevenue.toLocaleString()}</p>
+                    </div>
+                `;
+
+                Object.values(bookings).forEach(booking => {
+                    const bookingDiv = document.createElement('div');
+                    bookingDiv.className = 'border border-gray-200 rounded-lg p-4 mb-4';
+                    bookingDiv.innerHTML = `
+                        <div class="flex justify-between items-start">
+                            <div>
+                                <h4 class="font-semibold text-lg">${booking.carName}</h4>
+                                <p class="text-gray-600">Customer: ${booking.customerName}</p>
+                                <p class="text-gray-600">Phone: ${booking.customerPhone}</p>
+                                <p class="text-gray-600">City: ${booking.city}</p>
+                                <p class="text-gray-600">Dates: ${booking.startDate} to ${booking.endDate}</p>
+                                <p class="text-gray-600">Amount: ₹${booking.totalPrice?.toLocaleString() || 'N/A'}</p>
+                                <p class="text-gray-600">Created: ${new Date(booking.createdAt).toLocaleDateString()}</p>
+                                ${booking.notes ? `<p class="text-gray-600">Notes: ${booking.notes}</p>` : ''}
+                            </div>
+                            <div class="text-right">
+                                <span class="inline-block px-3 py-1 rounded-full text-sm ${
+                                    booking.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
+                                    booking.status === 'confirmed' ? 'bg-green-100 text-green-800' :
+                                    'bg-red-100 text-red-800'
+                                }">${booking.status}</span>
+                                <p class="text-sm text-gray-500 mt-2">ID: ${booking.id}</p>
+                                <div class="mt-2 space-x-2">
+                                    ${booking.status === 'pending' ? `
+                                        <button onclick="updateBookingStatus('${booking.id}', 'confirmed')" class="bg-green-600 text-white px-3 py-1 rounded text-sm hover:bg-green-700">
+                                            Confirm
+                                        </button>
+                                        <button onclick="updateBookingStatus('${booking.id}', 'cancelled')" class="bg-red-600 text-white px-3 py-1 rounded text-sm hover:bg-red-700">
+                                            Cancel
+                                        </button>
+                                    ` : ''}
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                    bookingsList.appendChild(bookingDiv);
+                });
+
+            } catch (error) {
+                console.error('Error loading bookings:', error);
+                document.getElementById('bookings-list').innerHTML = '<p class="text-red-600">Error loading bookings.</p>';
+            }
+        }
+
+        // Update booking status
+        async function updateBookingStatus(bookingId, status) {
+            try {
+                await database.ref('bookings/' + bookingId + '/status').set(status);
+                alert(`Booking ${status} successfully!`);
+                loadBookings();
+            } catch (error) {
+                console.error('Error updating booking:', error);
+                alert('Error updating booking status');
+            }
+        }
+
+        // Load calendar view
+        async function loadCalendar() {
+            const selectedCarId = document.getElementById('calendar-car-select').value;
+            const calendarView = document.getElementById('calendar-view');
+            
+            if (!selectedCarId) {
+                calendarView.innerHTML = '<p class="text-gray-600">Please select a car to view calendar.</p>';
+                return;
+            }
+
+            try {
+                const bookingsRef = database.ref('bookings');
+                const snapshot = await bookingsRef.once('value');
+                const bookings = snapshot.val() || {};
+
+                const carBookings = Object.values(bookings).filter(booking => 
+                    booking.carId === selectedCarId && booking.status !== 'cancelled'
+                );
+
+                // Generate calendar for next 3 months
+                const today = new Date();
+                const months = [];
+                
+                for (let i = 0; i < 3; i++) {
+                    const month = new Date(today.getFullYear(), today.getMonth() + i, 1);
+                    months.push(month);
+                }
+
+                let calendarHTML = '';
+                months.forEach(month => {
+                    calendarHTML += generateMonthCalendar(month, carBookings);
+                });
+
+                calendarView.innerHTML = calendarHTML;
+
+            } catch (error) {
+                console.error('Error loading calendar:', error);
+                calendarView.innerHTML = '<p class="text-red-600">Error loading calendar.</p>';
+            }
+        }
+
+        // Generate month calendar
+        function generateMonthCalendar(month, bookings) {
+            const monthNames = ['January', 'February', 'March', 'April', 'May', 'June',
+                'July', 'August', 'September', 'October', 'November', 'December'];
+            
+            const firstDay = new Date(month.getFullYear(), month.getMonth(), 1);
+            const lastDay = new Date(month.getFullYear(), month.getMonth() + 1, 0);
+            const startDate = new Date(firstDay);
+            startDate.setDate(startDate.getDate() - firstDay.getDay());
+
+            let html = `
+                <div class="mb-6">
+                    <h4 class="font-semibold text-lg mb-3">${monthNames[month.getMonth()]} ${month.getFullYear()}</h4>
+                    <div class="grid grid-cols-7 gap-1 text-center">
+                        <div class="font-medium text-gray-600 p-2">Sun</div>
+                        <div class="font-medium text-gray-600 p-2">Mon</div>
+                        <div class="font-medium text-gray-600 p-2">Tue</div>
+                        <div class="font-medium text-gray-600 p-2">Wed</div>
+                        <div class="font-medium text-gray-600 p-2">Thu</div>
+                        <div class="font-medium text-gray-600 p-2">Fri</div>
+                        <div class="font-medium text-gray-600 p-2">Sat</div>
+            `;
+
+            const currentDate = new Date(startDate);
+            for (let week = 0; week < 6; week++) {
+                for (let day = 0; day < 7; day++) {
+                    const dateStr = currentDate.toISOString().split('T')[0];
+                    const isCurrentMonth = currentDate.getMonth() === month.getMonth();
+                    const isBooked = bookings.some(booking => {
+                        const start = new Date(booking.startDate);
+                        const end = new Date(booking.endDate);
+                        return currentDate >= start && currentDate <= end;
+                    });
+
+                    html += `
+                        <div class="p-2 h-10 flex items-center justify-center ${
+                            !isCurrentMonth ? 'text-gray-300' :
+                            isBooked ? 'bg-red-100 text-red-800 font-semibold' :
+                            'hover:bg-gray-100'
+                        }">
+                            ${currentDate.getDate()}
+                        </div>
+                    `;
+                    currentDate.setDate(currentDate.getDate() + 1);
+                }
+                if (currentDate.getMonth() !== month.getMonth()) break;
+            }
+
+            html += `
+                    </div>
+                    <div class="mt-2 text-sm text-gray-600">
+                        <span class="inline-block w-3 h-3 bg-red-100 mr-1"></span> Booked dates
+                    </div>
+                </div>
+            `;
+
+            return html;
+        }
+
+        // Add car functions
+        function showAddCarModal() {
+            document.getElementById('add-car-modal').classList.add('active');
+        }
+
+        function closeAddCarModal() {
+            document.getElementById('add-car-modal').classList.remove('active');
+            document.getElementById('add-car-form').reset();
+        }
+
+        // Handle add car form submission
+        document.getElementById('add-car-form').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const name = document.getElementById('new-car-name').value;
+            const color = document.getElementById('new-car-color').value;
+            const price1 = parseInt(document.getElementById('new-car-price-1').value);
+            const price15 = parseInt(document.getElementById('new-car-price-15').value);
+            const price30 = parseInt(document.getElementById('new-car-price-30').value);
+            const features = document.getElementById('new-car-features').value.split(',').map(f => f.trim());
+            const specs = document.getElementById('new-car-specs').value.split(',').map(s => s.trim());
+            const imageFiles = document.getElementById('new-car-images').files;
+
+            try {
+                // Convert images to base64
+                const images = [];
+                for (let i = 0; i < imageFiles.length; i++) {
+                    const base64 = await fileToBase64(imageFiles[i]);
+                    images.push(base64);
+                }
+
+                const carId = name.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
+                const newCar = {
+                    id: carId,
+                    name: name,
+                    color: color,
+                    images: images,
+                    price: { 1: price1, 15: price15, 30: price30 },
+                    features: features,
+                    specs: specs
+                };
+
+                // Add to Firebase - real-time listener will update UI automatically
+                await database.ref('cars/' + carId).set(newCar);
+                
+                alert('Car added successfully!');
+                closeAddCarModal();
+
+            } catch (error) {
+                console.error('Error adding car:', error);
+                alert('Error adding car. Please try again.');
+            }
+        });
+
+        // Convert file to base64
+        function fileToBase64(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.readAsDataURL(file);
+                reader.onload = () => resolve(reader.result);
+                reader.onerror = error => reject(error);
+            });
+        }
+
+        // Update car images function
+        function updateCarImages(carId) {
+            const car = cars.find(c => c.id === carId);
+            if (!car) return;
+
+            document.getElementById('update-images-car-id').value = carId;
+            
+            // Load current images
+            const currentImagesGrid = document.getElementById('current-images-grid');
+            currentImagesGrid.innerHTML = '';
+            
+            if (car.images && car.images.length > 0) {
+                car.images.forEach((image, index) => {
+                    const imageDiv = document.createElement('div');
+                    imageDiv.className = 'relative group';
+                    imageDiv.innerHTML = `
+                        <img src="${image}" alt="${car.name}" class="w-full h-24 object-cover rounded-lg">
+                        <button onclick="removeCarImage('${carId}', ${index})" 
+                                class="absolute top-1 right-1 bg-red-600 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs hover:bg-red-700 opacity-0 group-hover:opacity-100 transition-opacity">
+                            ×
+                        </button>
+                        <div class="absolute bottom-1 left-1 bg-black bg-opacity-50 text-white text-xs px-1 rounded">
+                            ${index + 1}
+                        </div>
+                    `;
+                    currentImagesGrid.appendChild(imageDiv);
+                });
+            } else {
+                currentImagesGrid.innerHTML = '<p class="text-gray-600 col-span-3">No images found for this car.</p>';
+            }
+
+            document.getElementById('update-images-modal').classList.add('active');
+        }
+
+        // Remove car image
+        async function removeCarImage(carId, imageIndex) {
+            if (!confirm('Are you sure you want to remove this image?')) return;
+
+            try {
+                const car = cars.find(c => c.id === carId);
+                if (!car || !car.images) return;
+
+                const updatedImages = car.images.filter((_, index) => index !== imageIndex);
+                
+                await database.ref('cars/' + carId + '/images').set(updatedImages);
+                alert('Image removed successfully!');
+                
+                // Refresh the modal
+                updateCarImages(carId);
+
+            } catch (error) {
+                console.error('Error removing image:', error);
+                alert('Error removing image');
+            }
+        }
+
+        // Close update images modal
+        function closeUpdateImagesModal() {
+            document.getElementById('update-images-modal').classList.remove('active');
+            document.getElementById('update-images-form').reset();
+        }
+
+        // Handle update images form
+        document.getElementById('update-images-form').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const carId = document.getElementById('update-images-car-id').value;
+            const newImageFiles = document.getElementById('new-images-input').files;
+            
+            if (newImageFiles.length === 0) {
+                alert('Please select at least one image to add');
+                return;
+            }
+
+            try {
+                const car = cars.find(c => c.id === carId);
+                if (!car) return;
+
+                // Convert new images to base64
+                const newImages = [];
+                for (let i = 0; i < newImageFiles.length; i++) {
+                    const base64 = await fileToBase64(newImageFiles[i]);
+                    newImages.push(base64);
+                }
+
+                // Combine existing images with new ones
+                const existingImages = car.images || [];
+                const allImages = [...existingImages, ...newImages];
+
+                await database.ref('cars/' + carId + '/images').set(allImages);
+                alert(`${newImages.length} image(s) added successfully!`);
+                closeUpdateImagesModal();
+
+            } catch (error) {
+                console.error('Error updating images:', error);
+                alert('Error updating images');
+            }
+        });
+
+        // Utility functions
+        function scrollToCars() {
+            document.getElementById('cars').scrollIntoView({ behavior: 'smooth' });
+        }
+
+        // Smooth scrolling for navigation
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function (e) {
+                e.preventDefault();
+                const target = document.querySelector(this.getAttribute('href'));
+                if (target) {
+                    target.scrollIntoView({ behavior: 'smooth' });
+                }
+            });
+        });
+    </script>
+<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'98e642e6e0aa2e83',t:'MTc2MDQzNjM1OC4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+</html>
