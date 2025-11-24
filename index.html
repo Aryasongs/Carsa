@@ -514,7 +514,7 @@
                     
                     <div class="bg-gray-50 p-6 rounded-lg">
                         <h3 class="text-xl font-semibold mb-4">Book This Car</h3>
-          <div class="space-y-4">
+        <div class="space-y-4">
 
     <!-- Drive Type -->
     <div>
@@ -527,36 +527,15 @@
         </select>
     </div>
 
-    <!-- Pickup Time -->
+    <!-- Pickup Type -->
     <div>
-        <label class="block text-sm font-medium text-gray-700 mb-2">Pickup Time *</label>
-        <select id="booking-time"
+        <label class="block text-sm font-medium text-gray-700 mb-2">Pickup Type *</label>
+        <select id="pickup-type"
             class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
-            <option value="">Select Pickup Time</option>
-            <option value="00:00">12:00 AM</option>
-            <option value="01:00">01:00 AM</option>
-            <option value="02:00">02:00 AM</option>
-            <option value="03:00">03:00 AM</option>
-            <option value="04:00">04:00 AM</option>
-            <option value="05:00">05:00 AM</option>
-            <option value="06:00">06:00 AM</option>
-            <option value="07:00">07:00 AM</option>
-            <option value="08:00">08:00 AM</option>
-            <option value="09:00">09:00 AM</option>
-            <option value="10:00">10:00 AM</option>
-            <option value="11:00">11:00 AM</option>
-            <option value="12:00">12:00 PM</option>
-            <option value="13:00">01:00 PM</option>
-            <option value="14:00">02:00 PM</option>
-            <option value="15:00">03:00 PM</option>
-            <option value="16:00">04:00 PM</option>
-            <option value="17:00">05:00 PM</option>
-            <option value="18:00">06:00 PM</option>
-            <option value="19:00">07:00 PM</option>
-            <option value="20:00">08:00 PM</option>
-            <option value="21:00">09:00 PM</option>
-            <option value="22:00">10:00 PM</option>
-            <option value="23:00">11:00 PM</option>
+            <option value="">Select Pickup Method</option>
+            <option value="doorstep">Doorstep Delivery</option>
+            <option value="office">Meet at Office</option>
+            <option value="airport">Airport Pickup (Extra)</option>
         </select>
     </div>
 
@@ -570,6 +549,35 @@
             <option value="Jalandhar">Jalandhar</option>
             <option value="Hoshiarpur">Hoshiarpur</option>
             <option value="Amritsar">Amritsar</option>
+        </select>
+    </div>
+
+    <!-- Drop City -->
+    <div>
+        <label class="block text-sm font-medium text-gray-700 mb-2">Drop City *</label>
+        <select id="drop-city"
+            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+            <option value="">Select Drop Location</option>
+            <option value="same">Same as Pickup</option>
+            <option value="Jalandhar">Jalandhar</option>
+            <option value="Chandigarh">Chandigarh</option>
+            <option value="Delhi">Delhi</option>
+            <option value="Amritsar">Amritsar</option>
+        </select>
+    </div>
+
+    <!-- Pickup Time -->
+    <div>
+        <label class="block text-sm font-medium text-gray-700 mb-2">Pickup Time *</label>
+        <select id="booking-time"
+            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+            <option value="">Select Pickup Time</option>
+            <script>
+                for (let i = 0; i < 24; i++) {
+                    let hr = i.toString().padStart(2, '0');
+                    document.write(`<option value="${hr}:00">${hr}:00</option>`);
+                }
+            </script>
         </select>
     </div>
 
@@ -587,6 +595,70 @@
         </div>
     </div>
 
+    <!-- Fuel Type -->
+    <div>
+        <label class="block text-sm font-medium text-gray-700 mb-2">Fuel Type *</label>
+        <select id="fuel-type"
+            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+            <option value="">Select Fuel</option>
+            <option value="petrol">Petrol</option>
+            <option value="diesel">Diesel</option>
+        </select>
+    </div>
+
+    <!-- Transmission -->
+    <div>
+        <label class="block text-sm font-medium text-gray-700 mb-2">Transmission *</label>
+        <select id="transmission"
+            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+            <option value="">Select Transmission</option>
+            <option value="automatic">Automatic</option>
+            <option value="manual">Manual</option>
+        </select>
+    </div>
+
+    <!-- KM Limit -->
+    <div>
+        <label class="block text-sm font-medium text-gray-700 mb-2">KM Package *</label>
+        <select id="km-limit"
+            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+            <option value="">Select KM Limit</option>
+            <option value="150">150 KM/day</option>
+            <option value="250">250 KM/day</option>
+            <option value="unlimited">Unlimited KM (Extra)</option>
+        </select>
+    </div>
+
+    <!-- Add-ons -->
+    <div>
+        <label class="block text-sm font-medium text-gray-700 mb-2">Add-ons</label>
+        <div class="space-y-2">
+            <label><input type="checkbox" id="addon-driver" /> Additional Driver (₹500/day)</label><br>
+            <label><input type="checkbox" id="addon-fastag" /> Fastag Included (₹300)</label><br>
+            <label><input type="checkbox" id="addon-babyseat" /> Baby Seat (₹400)</label><br>
+            <label><input type="checkbox" id="addon-clean" /> Pre-Delivery Cleaning (₹150)</label>
+        </div>
+    </div>
+
+    <!-- Deposit Method -->
+    <div>
+        <label class="block text-sm font-medium text-gray-700 mb-2">Deposit Payment *</label>
+        <select id="deposit-method"
+            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+            <option value="">Select Method</option>
+            <option value="online">Online</option>
+            <option value="cash">Cash on Pickup</option>
+        </select>
+    </div>
+
+    <!-- Promo Code -->
+    <div>
+        <label class="block text-sm font-medium text-gray-700 mb-2">Promo Code (Optional)</label>
+        <input type="text" id="promo-code"
+            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+            placeholder="Enter promo code">
+    </div>
+
     <!-- Customer Details -->
     <div>
         <label class="block text-sm font-medium text-gray-700 mb-2">Customer Details *</label>
@@ -595,6 +667,7 @@
         <input type="tel" id="customer-phone" placeholder="Phone Number"
             class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
     </div>
+
                             
                             <div id="price-breakdown" class="bg-white p-4 rounded-lg border hidden">
                                 <!-- Price breakdown will be shown here -->
