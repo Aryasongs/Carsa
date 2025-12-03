@@ -2,58 +2,82 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Pulse</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Pulse | The Social Network</title>
     
-    <!-- Tailwind CSS -->
+    <!-- Core Dependencies -->
     <script src="https://cdn.tailwindcss.com"></script>
-    
-    <!-- React & ReactDOM (UMD) -->
     <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
     <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
-    
-    <!-- Babel for JSX -->
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
 
-    <!-- Firebase Compat Libraries (Stable for HTML files) -->
+    <!-- Firebase Compat (Most Stable for HTML) -->
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
 
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+
     <style>
-        body {
-            background-color: black;
-            color: white;
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        :root {
+            --color-primary: #1d9bf0;
+            --color-bg: #000000;
+            --color-surface: #16181c;
+            --color-text: #e7e9ea;
+            --color-text-dim: #71767b;
+            --color-border: #2f3336;
         }
-        .no-scrollbar::-webkit-scrollbar { display: none; }
-        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
-        #error-display { color: #ff5555; padding: 20px; font-family: monospace; display: none; }
+        body {
+            background-color: var(--color-bg);
+            color: var(--color-text);
+            font-family: 'Inter', sans-serif;
+            overflow-y: scroll;
+        }
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar { width: 10px; }
+        ::-webkit-scrollbar-track { background: var(--color-bg); }
+        ::-webkit-scrollbar-thumb { background: #333; border-radius: 5px; }
+        ::-webkit-scrollbar-thumb:hover { background: #555; }
+        
+        .glass-panel {
+            background: rgba(0, 0, 0, 0.65);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+        }
+        
+        .hide-scrollbar::-webkit-scrollbar { display: none; }
+        .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+        /* Animations */
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        .animate-fade-in { animation: fadeIn 0.3s ease-out forwards; }
+        
+        @keyframes pulse-glow { 0% { box-shadow: 0 0 0 0 rgba(29, 155, 240, 0.4); } 70% { box-shadow: 0 0 0 10px rgba(29, 155, 240, 0); } 100% { box-shadow: 0 0 0 0 rgba(29, 155, 240, 0); } }
+        .pulse-effect:active { animation: pulse-glow 0.3s; }
     </style>
 </head>
 <body>
-    <div id="root">
-        <div class="flex items-center justify-center min-h-screen text-blue-500">
-            <div class="animate-pulse flex flex-col items-center">
-                <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg>
-                <span class="mt-4 font-bold text-white">Initializing Pulse...</span>
-            </div>
-        </div>
+    <div id="root"></div>
+    
+    <!-- Error Fallback Display -->
+    <div id="crash-screen" style="display:none; padding: 40px; text-align: center; color: #ff4444;">
+        <h1 style="font-size: 24px; margin-bottom: 20px;">Something went wrong.</h1>
+        <p id="error-message" style="font-family: monospace; background: #222; padding: 20px; border-radius: 8px;"></p>
+        <button onclick="window.location.reload()" style="margin-top:20px; padding: 10px 20px; background: #1d9bf0; color: white; border: none; border-radius: 20px; cursor: pointer;">Reload Pulse</button>
     </div>
-    <div id="error-display"></div>
 
     <script>
-        // Global Error Handler to catch "Black Screen" issues
-        window.onerror = function(message, source, lineno, colno, error) {
-            const display = document.getElementById('error-display');
+        window.onerror = function(msg, url, line, col, error) {
             document.getElementById('root').style.display = 'none';
-            display.style.display = 'block';
-            display.innerHTML = `<strong>Error:</strong> ${message}<br><small>${source}:${lineno}</small>`;
+            document.getElementById('crash-screen').style.display = 'block';
+            document.getElementById('error-message').textContent = `${msg}\nAt: ${line}:${col}`;
+            return false;
         };
     </script>
 
     <script type="text/babel">
-        // --- Firebase Config & Init ---
+        // --- CONFIGURATION ---
         const firebaseConfig = {
             apiKey: "AIzaSyB2XeuTfHZ7FYKLoYb4epKp3upmVqG0fzE",
             authDomain: "pulse-17f40.firebaseapp.com",
@@ -64,550 +88,696 @@
             appId: "1:259780854138:web:89c265fd22a34a7f1fd6c3"
         };
 
-        // Initialize Firebase Global (Compat)
-        firebase.initializeApp(firebaseConfig);
+        // Initialize Firebase
+        if (!firebase.apps.length) {
+            firebase.initializeApp(firebaseConfig);
+        }
         const auth = firebase.auth();
         const db = firebase.firestore();
+        const { useState, useEffect, useRef, useMemo, createContext, useContext, useReducer } = React;
 
-        // React Hooks & Globals
-        const { useState, useEffect, useRef, useMemo } = React;
-        const PUBLIC_DATA_PATH = ['artifacts', firebaseConfig.projectId, 'public', 'data'];
-        
-        // --- Helper Constants ---
-        const BUZZ_COLLECTION = 'pulse_buzzes';
-        const USER_COLLECTION = 'pulse_users';
-        const NOTIF_COLLECTION = 'pulse_notifications';
-        const CHAT_COLLECTION = 'pulse_chats';
+        // Constants
+        const PATH = {
+            USERS: ['artifacts', firebaseConfig.projectId, 'public', 'data', 'pulse_users'],
+            BUZZES: ['artifacts', firebaseConfig.projectId, 'public', 'data', 'pulse_buzzes'],
+            NOTIFS: ['artifacts', firebaseConfig.projectId, 'public', 'data', 'pulse_notifications'],
+            CHATS: ['artifacts', firebaseConfig.projectId, 'public', 'data', 'pulse_chats']
+        };
 
-        // --- Icons (Inline Components) ---
-        const Icon = ({ path, size = 24, className = "" }) => (
-            <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
-                {path}
-            </svg>
-        );
-
+        // --- ICONS (SVG) ---
         const Icons = {
-            Zap: (p) => <Icon {...p} path={<><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></>} />,
-            Home: (p) => <Icon {...p} path={<><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></>} />,
-            Bell: (p) => <Icon {...p} path={<><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.73 21a2 2 0 0 1-3.46 0"></path></>} />,
-            Mail: (p) => <Icon {...p} path={<><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path><polyline points="22,6 12,13 2,6"></polyline></>} />,
-            User: (p) => <Icon {...p} path={<><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></>} />,
-            Settings: (p) => <Icon {...p} path={<><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></>} />,
-            LogOut: (p) => <Icon {...p} path={<><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></>} />,
-            ImageIcon: (p) => <Icon {...p} path={<><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></>} />,
-            X: (p) => <Icon {...p} path={<><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></>} />,
-            Camera: (p) => <Icon {...p} path={<><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path><circle cx="12" cy="13" r="4"></circle></>} />,
-            MapPin: (p) => <Icon {...p} path={<><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></>} />,
-            LinkIcon: (p) => <Icon {...p} path={<><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></>} />,
-            Calendar: (p) => <Icon {...p} path={<><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></>} />,
-            Heart: (p) => <Icon {...p} path={<><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path></>} />,
-            MessageCircle: (p) => <Icon {...p} path={<><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"></path></>} />,
-            Repeat2: (p) => <Icon {...p} path={<><polyline points="17 1 21 5 17 9"></polyline><path d="M3 11V9a4 4 0 0 1 4-4h14"></path><polyline points="7 23 3 19 7 15"></polyline><path d="M21 13v2a4 4 0 0 1-4 4H3"></path></>} />,
-            Send: (p) => <Icon {...p} path={<><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></>} />,
-            Search: (p) => <Icon {...p} path={<><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></>} />,
-            MoreHorizontal: (p) => <Icon {...p} path={<><circle cx="12" cy="12" r="1"></circle><circle cx="19" cy="12" r="1"></circle><circle cx="5" cy="12" r="1"></circle></>} />,
-            Trash2: (p) => <Icon {...p} path={<><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></>} />,
+            Zap: (p) => <svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg>,
+            Home: (p) => <svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>,
+            Search: (p) => <svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>,
+            Bell: (p) => <svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.73 21a2 2 0 0 1-3.46 0"></path></svg>,
+            Mail: (p) => <svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path><polyline points="22,6 12,13 2,6"></polyline></svg>,
+            User: (p) => <svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>,
+            More: (p) => <svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="1"></circle><circle cx="19" cy="12" r="1"></circle><circle cx="5" cy="12" r="1"></circle></svg>,
+            Image: (p) => <svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg>,
+            X: (p) => <svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>,
+            Heart: (p) => <svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path></svg>,
+            Message: (p) => <svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"></path></svg>,
+            Repeat: (p) => <svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="17 1 21 5 17 9"></polyline><path d="M3 11V9a4 4 0 0 1 4-4h14"></path><polyline points="7 23 3 19 7 15"></polyline><path d="M21 13v2a4 4 0 0 1-4 4H3"></path></svg>,
+            Send: (p) => <svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>,
+            ArrowLeft: (p) => <svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>,
+            MapPin: (p) => <svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>,
+            Link: (p) => <svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg>,
+            Calendar: (p) => <svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>,
+            Camera: (p) => <svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path><circle cx="12" cy="13" r="4"></circle></svg>,
+            Trash: (p) => <svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>,
+            LogOut: (p) => <svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>
         };
 
-        // --- Utils ---
-        const formatTime = (timestamp) => {
-            if (!timestamp) return 'Just now';
-            const now = Date.now();
-            const diff = now - timestamp;
-            const seconds = Math.floor(diff / 1000);
-            if (seconds < 60) return `${seconds}s`;
-            const minutes = Math.floor(seconds / 60);
-            if (minutes < 60) return `${minutes}m`;
-            const hours = Math.floor(minutes / 60);
-            if (hours < 24) return `${hours}h`;
-            return `${Math.floor(hours / 24)}d`;
+        // --- UTILS ---
+        const formatTime = (ts) => {
+            if (!ts) return '';
+            const sec = Math.floor((Date.now() - ts) / 1000);
+            if (sec < 60) return `${sec}s`;
+            if (sec < 3600) return `${Math.floor(sec/60)}m`;
+            if (sec < 86400) return `${Math.floor(sec/3600)}h`;
+            return new Date(ts).toLocaleDateString();
         };
 
-        const compressImage = (file, maxWidth = 800) => {
-            return new Promise((resolve) => {
-                const reader = new FileReader();
-                reader.readAsDataURL(file);
-                reader.onload = (event) => {
-                    const img = new Image();
-                    img.src = event.target.result;
-                    img.onload = () => {
-                        const canvas = document.createElement('canvas');
-                        const ratio = maxWidth / img.width;
-                        canvas.width = maxWidth;
-                        canvas.height = img.height * ratio;
-                        const ctx = canvas.getContext('2d');
-                        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-                        resolve(canvas.toDataURL('image/jpeg', 0.7));
-                    };
-                };
-            });
-        };
-
-        const RichText = ({ text }) => {
-            if (!text) return null;
-            const parts = text.split(/((?:#[a-zA-Z0-9_]+)|(?:@[a-zA-Z0-9_]+))/g);
-            return (
-                <span>
-                    {parts.map((part, i) => {
-                        if (part.startsWith('#') || part.startsWith('@')) {
-                            return <span key={i} className="text-blue-500 hover:underline cursor-pointer">{part}</span>;
-                        }
-                        return part;
-                    })}
-                </span>
-            );
-        };
-
-        const Avatar = ({ src, name, size = 'md' }) => {
-            const initial = name ? name[0].toUpperCase() : '?';
-            const sizeClasses = { sm: 'w-8 h-8 text-xs', md: 'w-10 h-10 text-base', lg: 'w-32 h-32 text-4xl border-4 border-black' };
-            const sizeClass = sizeClasses[size] || sizeClasses.md;
-            
-            if (src) return <img src={src} alt={name} className={`${sizeClass} rounded-full object-cover bg-gray-800`} />;
-
-            const colors = ['bg-blue-500', 'bg-pink-500', 'bg-purple-500', 'bg-green-500', 'bg-yellow-500', 'bg-indigo-500'];
-            const colorIndex = name ? name.charCodeAt(0) % colors.length : 0;
-            return <div className={`${sizeClass} ${colors[colorIndex]} rounded-full flex items-center justify-center font-bold text-white flex-shrink-0`}>{initial}</div>;
-        };
-
-        // --- Core Components ---
-
-        const Sidebar = ({ view, setView, currentUser, unreadCount, onLogout }) => (
-            <div className="fixed bottom-0 left-0 w-full bg-black border-t border-gray-800 md:relative md:w-64 md:border-t-0 md:border-r md:h-screen md:flex md:flex-col md:justify-between z-50">
-                <div className="flex justify-around md:flex-col md:justify-start md:px-4 md:py-6 md:space-y-4">
-                    <div className="hidden md:block mb-2 px-3">
-                        <h1 className="text-3xl font-bold text-white flex items-center gap-2 cursor-pointer" onClick={() => setView('home')}>
-                            <Icons.Zap className="fill-white w-8 h-8" />
-                        </h1>
-                    </div>
-                    
-                    <button onClick={() => setView('home')} className={`flex items-center gap-4 p-3 md:px-4 md:py-3 rounded-full transition-all ${view === 'home' ? 'font-bold text-white' : 'text-gray-400 hover:bg-gray-900 hover:text-white'}`}>
-                        <Icons.Home size={26} /> <span className="hidden md:block text-xl">Home</span>
-                    </button>
-                    
-                    <button onClick={() => setView('notifications')} className={`flex items-center gap-4 p-3 md:px-4 md:py-3 rounded-full transition-all relative ${view === 'notifications' ? 'font-bold text-white' : 'text-gray-400 hover:bg-gray-900 hover:text-white'}`}>
-                        <div className="relative">
-                            <Icons.Bell size={26} />
-                            {unreadCount > 0 && <span className="absolute -top-1 -right-1 bg-blue-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full">{unreadCount > 9 ? '9+' : unreadCount}</span>}
-                        </div>
-                        <span className="hidden md:block text-xl">Notifications</span>
-                    </button>
-
-                    <button onClick={() => setView('messages')} className={`flex items-center gap-4 p-3 md:px-4 md:py-3 rounded-full transition-all ${view === 'messages' ? 'font-bold text-white' : 'text-gray-400 hover:bg-gray-900 hover:text-white'}`}>
-                        <Icons.Mail size={26} /> <span className="hidden md:block text-xl">Messages</span>
-                    </button>
-
-                    <button onClick={() => setView('profile')} className={`flex items-center gap-4 p-3 md:px-4 md:py-3 rounded-full transition-all ${view === 'profile' ? 'font-bold text-white' : 'text-gray-400 hover:bg-gray-900 hover:text-white'}`}>
-                        <Icons.User size={26} /> <span className="hidden md:block text-xl">Profile</span>
-                    </button>
-
-                    <div className="hidden md:block mt-auto pt-6 border-t border-gray-800">
-                        <div className="flex items-center gap-3 mb-4 px-2">
-                            <Avatar src={currentUser?.photoURL} name={currentUser?.displayName} size="sm" />
-                            <div className="flex-1 overflow-hidden">
-                                <p className="font-bold truncate text-sm">{currentUser?.displayName}</p>
-                                <p className="text-gray-500 truncate text-xs">@{currentUser?.handle}</p>
-                            </div>
-                        </div>
-                        <button onClick={onLogout} className="flex items-center gap-4 px-4 py-3 text-gray-400 hover:text-red-500 transition-colors rounded-full hover:bg-gray-900 w-full">
-                            <Icons.LogOut size={22} /> <span className="text-xl font-medium">Logout</span>
-                        </button>
-                    </div>
-                </div>
-            </div>
-        );
-
-        const ComposeBuzz = ({ userProfile, onPost }) => {
-            const [text, setText] = useState('');
-            const [image, setImage] = useState(null);
-            const [isPosting, setIsPosting] = useState(false);
-            const fileInputRef = useRef(null);
-
-            const handleImageSelect = async (e) => {
-                if (e.target.files?.[0]) {
-                    const compressed = await compressImage(e.target.files[0], 600);
-                    setImage(compressed);
+        const compressImg = (file, w=800) => new Promise(res => {
+            const r = new FileReader();
+            r.readAsDataURL(file);
+            r.onload = e => {
+                const i = new Image();
+                i.src = e.target.result;
+                i.onload = () => {
+                    const c = document.createElement('canvas');
+                    const sc = w/i.width;
+                    c.width = w; c.height = i.height*sc;
+                    c.getContext('2d').drawImage(i,0,0,c.width,c.height);
+                    res(c.toDataURL('image/jpeg', 0.8));
                 }
-            };
+            }
+        });
 
-            const handleSubmit = async () => {
-                if ((!text.trim() && !image) || isPosting) return;
-                setIsPosting(true);
-                await onPost(text, image);
-                setText('');
-                setImage(null);
-                setIsPosting(false);
-            };
+        // --- CONTEXTS ---
+        const ToastContext = createContext();
+        const UserContext = createContext();
 
+        const ToastProvider = ({ children }) => {
+            const [toasts, setToasts] = useState([]);
+            const addToast = (msg, type='info') => {
+                const id = Date.now();
+                setToasts(p => [...p, {id, msg, type}]);
+                setTimeout(() => setToasts(p => p.filter(t => t.id !== id)), 3000);
+            };
             return (
-                <div className="border-b border-gray-800 p-4">
-                    <div className="flex gap-4">
-                        <Avatar src={userProfile?.photoURL} name={userProfile?.displayName} />
-                        <div className="flex-1">
-                            <textarea value={text} onChange={(e) => setText(e.target.value)} placeholder="What is happening?!" className="w-full bg-transparent text-xl text-white placeholder-gray-600 focus:outline-none resize-none min-h-[60px]" rows={2}></textarea>
-                            {image && (
-                                <div className="relative mt-2 mb-4">
-                                    <img src={image} alt="Upload" className="rounded-2xl max-h-64 object-cover border border-gray-800" />
-                                    <button onClick={() => setImage(null)} className="absolute top-2 right-2 bg-black/70 p-1.5 rounded-full hover:bg-black/90 text-white transition-colors"><Icons.X size={16} /></button>
-                                </div>
-                            )}
-                            <div className="flex justify-between items-center mt-2 border-t border-gray-800 pt-3">
-                                <div className="flex gap-2 text-blue-500">
-                                    <button onClick={() => fileInputRef.current?.click()} className="p-2 hover:bg-blue-500/10 rounded-full transition-colors"><Icons.ImageIcon size={20} /></button>
-                                    <input type="file" ref={fileInputRef} className="hidden" accept="image/*" onChange={handleImageSelect} />
-                                </div>
-                                <div className="flex items-center gap-4">
-                                    <button onClick={handleSubmit} disabled={(!text.trim() && !image) || isPosting} className="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-5 rounded-full transition-all disabled:opacity-50">{isPosting ? 'Buzzing...' : 'Buzz'}</button>
-                                </div>
+                <ToastContext.Provider value={addToast}>
+                    {children}
+                    <div className="fixed bottom-20 left-1/2 transform -translate-x-1/2 z-50 flex flex-col gap-2 w-full max-w-sm px-4">
+                        {toasts.map(t => (
+                            <div key={t.id} className={`p-3 rounded-xl text-center shadow-lg font-semibold animate-fade-in ${t.type==='error'?'bg-red-500':'bg-blue-500'} text-white`}>
+                                {t.msg}
                             </div>
-                        </div>
+                        ))}
                     </div>
-                </div>
+                </ToastContext.Provider>
             );
         };
 
-        const Buzz = ({ buzz, currentUser, onLike, onRebuzz, onReply, onDelete }) => {
-            const isLiked = buzz.likes?.includes(currentUser.uid);
-            const isRebuzzed = buzz.rebuzzes?.includes(currentUser.uid);
-            const isOwner = buzz.uid === currentUser.uid;
+        // --- COMPONENTS ---
 
+        const Avatar = ({ src, name, size='md', className='' }) => {
+            const s = { sm: 'w-8 h-8 text-xs', md: 'w-10 h-10 text-sm', lg: 'w-12 h-12 text-base', xl: 'w-32 h-32 text-4xl' }[size];
+            const i = name ? name[0].toUpperCase() : '?';
+            const colors = ['bg-blue-600', 'bg-purple-600', 'bg-pink-600', 'bg-indigo-600', 'bg-teal-600'];
+            const c = colors[(name?.charCodeAt(0)||0) % colors.length];
+            return src ? 
+                <img src={src} className={`rounded-full object-cover border-2 border-black ${s} ${className}`} /> : 
+                <div className={`rounded-full flex items-center justify-center font-bold text-white border-2 border-black ${c} ${s} ${className}`}>{i}</div>;
+        };
+
+        const Button = ({ children, variant='primary', onClick, disabled, className='', size='md', icon }) => {
+            const base = "font-bold rounded-full transition-all duration-200 flex items-center justify-center gap-2 pulse-effect";
+            const v = {
+                primary: "bg-[#1d9bf0] text-white hover:bg-[#1a8cd8]",
+                secondary: "bg-white text-black hover:bg-gray-200",
+                outline: "border border-gray-600 text-[#eff3f4] hover:bg-white/10",
+                ghost: "text-[#eff3f4] hover:bg-white/10",
+                danger: "text-red-500 hover:bg-red-500/10"
+            }[variant];
+            const s = { sm: 'px-3 py-1.5 text-sm', md: 'px-6 py-2.5 text-base', lg: 'w-full py-3 text-lg' }[size];
             return (
-                <div className="border-b border-gray-800 p-4 hover:bg-white/5 transition-colors cursor-pointer group">
-                    {buzz.rebuzzedBy && <div className="flex items-center gap-2 text-gray-500 text-sm mb-2 ml-8 font-bold"><Icons.Repeat2 size={14} /> <span>{buzz.rebuzzedBy} rebuzzed</span></div>}
-                    <div className="flex gap-3">
-                        <Avatar src={buzz.authorPhoto} name={buzz.authorName} />
-                        <div className="flex-1 min-w-0">
-                            <div className="flex items-center justify-between">
-                                <div className="flex items-center gap-2 truncate text-[15px]">
-                                    <span className="font-bold text-white truncate hover:underline">{buzz.authorName}</span>
-                                    <span className="text-gray-500 truncate">@{buzz.authorHandle}</span>
-                                    <span className="text-gray-500">· {formatTime(buzz.createdAt)}</span>
-                                </div>
-                                {isOwner && <button onClick={(e) => { e.stopPropagation(); onDelete(buzz.id); }} className="text-gray-600 hover:text-red-500 p-1.5 rounded-full hover:bg-red-500/10 transition-colors"><Icons.Trash2 size={15} /></button>}
-                            </div>
-                            <div className="mt-0.5 text-white whitespace-pre-wrap break-words text-[15px] leading-normal"><RichText text={buzz.content} /></div>
-                            {buzz.image && <div className="mt-3"><img src={buzz.image} alt="Content" className="rounded-2xl max-h-80 w-full object-cover border border-gray-800" /></div>}
-                            <div className="flex justify-between mt-3 max-w-md text-gray-500">
-                                <button onClick={(e) => { e.stopPropagation(); onReply(buzz); }} className="flex items-center gap-1 group hover:text-blue-500"><div className="p-2 rounded-full group-hover:bg-blue-500/10"><Icons.MessageCircle size={18} /></div><span className="text-xs">{buzz.replyCount || ''}</span></button>
-                                <button onClick={(e) => { e.stopPropagation(); onRebuzz(buzz); }} className={`flex items-center gap-1 group ${isRebuzzed ? 'text-green-500' : 'hover:text-green-500'}`}><div className="p-2 rounded-full group-hover:bg-green-500/10"><Icons.Repeat2 size={18} /></div><span className="text-xs">{buzz.rebuzzes?.length || ''}</span></button>
-                                <button onClick={(e) => { e.stopPropagation(); onLike(buzz); }} className={`flex items-center gap-1 group ${isLiked ? 'text-pink-500' : 'hover:text-pink-500'}`}><div className="p-2 rounded-full group-hover:bg-pink-500/10"><Icons.Heart size={18} className={isLiked ? "fill-current" : ""} /></div><span className="text-xs">{buzz.likes?.length || ''}</span></button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
+                <button onClick={onClick} disabled={disabled} className={`${base} ${v} ${s} ${disabled ? 'opacity-50 cursor-not-allowed' : ''} ${className}`}>
+                    {icon} {children}
+                </button>
             );
         };
 
-        const EditProfileModal = ({ userProfile, onClose, onSave }) => {
-            const [name, setName] = useState(userProfile.displayName || '');
-            const [bio, setBio] = useState(userProfile.bio || '');
-            const [location, setLocation] = useState(userProfile.location || '');
-            const [website, setWebsite] = useState(userProfile.website || '');
-            const [avatar, setAvatar] = useState(userProfile.photoURL || '');
-            const [banner, setBanner] = useState(userProfile.bannerURL || '');
-            const [saving, setSaving] = useState(false);
-            const avatarRef = useRef(null);
-            const bannerRef = useRef(null);
-
-            const handleFile = async (e, type) => {
-                if (e.target.files?.[0]) {
-                    const compressed = await compressImage(e.target.files[0], type === 'banner' ? 1000 : 400);
-                    if (type === 'avatar') setAvatar(compressed); else setBanner(compressed);
-                }
-            };
-
-            const handleSave = async () => {
-                setSaving(true);
-                await onSave({ displayName: name, bio, location, website, photoURL: avatar, bannerURL: banner });
-                setSaving(false);
-                onClose();
-            };
-
+        const Modal = ({ isOpen, onClose, children, title }) => {
+            if (!isOpen) return null;
             return (
-                <div className="fixed inset-0 z-50 bg-blue-500/10 backdrop-blur-sm flex items-center justify-center p-4">
-                    <div className="bg-black w-full max-w-xl rounded-2xl shadow-2xl border border-gray-700 max-h-[90vh] overflow-y-auto no-scrollbar">
-                        <div className="flex justify-between items-center p-4 sticky top-0 bg-black/80 backdrop-blur z-10 border-b border-gray-800">
+                <div className="fixed inset-0 z-[60] bg-black/70 backdrop-blur-sm flex items-center justify-center p-4 animate-fade-in" onClick={onClose}>
+                    <div className="bg-black border border-gray-800 w-full max-w-lg rounded-2xl max-h-[90vh] flex flex-col shadow-2xl" onClick={e => e.stopPropagation()}>
+                        <div className="flex justify-between items-center p-4 border-b border-gray-800">
                             <div className="flex items-center gap-4">
-                                <button onClick={onClose}><Icons.X size={20} /></button>
-                                <h2 className="font-bold text-xl">Edit Profile</h2>
+                                <button onClick={onClose} className="p-2 hover:bg-white/10 rounded-full transition-colors"><Icons.X size={20} /></button>
+                                {title && <h2 className="text-xl font-bold">{title}</h2>}
                             </div>
-                            <button onClick={handleSave} disabled={saving} className="bg-white text-black font-bold px-4 py-1.5 rounded-full hover:bg-gray-200 disabled:opacity-50">{saving ? 'Saving' : 'Save'}</button>
                         </div>
-                        <div className="h-48 bg-gray-800 relative group cursor-pointer" onClick={() => bannerRef.current?.click()}>
-                            {banner ? <img src={banner} className="w-full h-full object-cover opacity-80" /> : <div className="w-full h-full flex items-center justify-center text-gray-500"><Icons.ImageIcon /></div>}
-                            <div className="absolute inset-0 bg-black/30 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"><div className="bg-black/50 p-3 rounded-full"><Icons.Camera size={24} className="text-white" /></div></div>
-                            <input type="file" ref={bannerRef} className="hidden" accept="image/*" onChange={(e) => handleFile(e, 'banner')} />
-                        </div>
-                        <div className="px-4 relative -mt-16 mb-4">
-                            <div className="w-32 h-32 rounded-full border-4 border-black relative group cursor-pointer" onClick={() => avatarRef.current?.click()}>
-                                <Avatar src={avatar} name={name} size="lg" />
-                                <div className="absolute inset-0 rounded-full bg-black/30 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"><Icons.Camera size={24} className="text-white" /></div>
-                            </div>
-                            <input type="file" ref={avatarRef} className="hidden" accept="image/*" onChange={(e) => handleFile(e, 'avatar')} />
-                        </div>
-                        <div className="px-4 pb-8 space-y-6">
-                            <div className="border border-gray-700 rounded p-2"><label className="text-gray-500 text-xs block">Name</label><input value={name} onChange={e => setName(e.target.value)} className="bg-transparent w-full outline-none text-white" /></div>
-                            <div className="border border-gray-700 rounded p-2"><label className="text-gray-500 text-xs block">Bio</label><textarea value={bio} onChange={e => setBio(e.target.value)} className="bg-transparent w-full outline-none text-white resize-none h-20"></textarea></div>
-                            <div className="border border-gray-700 rounded p-2"><label className="text-gray-500 text-xs block">Location</label><input value={location} onChange={e => setLocation(e.target.value)} className="bg-transparent w-full outline-none text-white" /></div>
-                            <div className="border border-gray-700 rounded p-2"><label className="text-gray-500 text-xs block">Website</label><input value={website} onChange={e => setWebsite(e.target.value)} className="bg-transparent w-full outline-none text-white" /></div>
-                        </div>
+                        <div className="overflow-y-auto p-4">{children}</div>
                     </div>
                 </div>
             );
         };
 
-        const LoginScreen = () => {
-            const handleGoogleLogin = async () => {
-                const provider = new firebase.auth.GoogleAuthProvider();
-                try { await auth.signInWithPopup(provider); } catch (error) { console.error(error); alert("Login failed. Check console."); }
-            };
+        // --- SUB-VIEWS ---
+
+        const Sidebar = ({ page, setPage, user }) => {
+            const menu = [
+                { id: 'home', icon: <Icons.Home size={26} />, label: 'Home' },
+                { id: 'explore', icon: <Icons.Search size={26} />, label: 'Explore' },
+                { id: 'notifications', icon: <Icons.Bell size={26} />, label: 'Notifications' },
+                { id: 'messages', icon: <Icons.Message size={26} />, label: 'Messages' },
+                { id: 'profile', icon: <Icons.User size={26} />, label: 'Profile' },
+            ];
+            
             return (
-                <div className="min-h-screen bg-black flex flex-col items-center justify-center p-6 text-white text-center">
-                    <Icons.Zap className="h-20 w-20 text-white mb-8 fill-white" />
-                    <h1 className="text-5xl font-extrabold tracking-tight mb-12">Happening now</h1>
-                    <button onClick={handleGoogleLogin} className="bg-white text-black px-8 py-3 rounded-full font-bold text-lg hover:bg-gray-200">Sign up with Google</button>
-                </div>
-            );
-        };
-
-        const CreateProfileScreen = ({ authUser, onComplete }) => {
-            const [handle, setHandle] = useState('');
-            const [bio, setBio] = useState('');
-            const [error, setError] = useState('');
-
-            const handleSubmit = (e) => {
-                e.preventDefault();
-                const cleanHandle = handle.replace('@', '').trim().toLowerCase();
-                if (cleanHandle.length < 3) return setError("Handle too short");
-                onComplete({ uid: authUser.uid, displayName: authUser.displayName, email: authUser.email, photoURL: authUser.photoURL, handle: cleanHandle, bio: bio, createdAt: Date.now() });
-            };
-
-            return (
-                <div className="min-h-screen bg-black flex items-center justify-center p-4 text-white">
-                    <div className="w-full max-w-md bg-black border border-gray-800 p-8 rounded-2xl">
-                        <h2 className="text-2xl font-bold mb-2">Create your profile</h2>
-                        <form onSubmit={handleSubmit} className="space-y-4">
-                            {error && <p className="text-red-500 text-sm">{error}</p>}
-                            <div className="relative"><input value={authUser.displayName || ''} disabled className="w-full bg-transparent border border-gray-700 rounded p-3 text-gray-400" /><label className="absolute -top-2 left-2 bg-black px-1 text-xs text-gray-500">Name</label></div>
-                            <div className="relative"><input value={handle} onChange={e => setHandle(e.target.value)} className="w-full bg-transparent border border-gray-700 rounded p-3 text-white" placeholder="pulse_user" /><label className="absolute -top-2 left-2 bg-black px-1 text-xs text-blue-500">Handle</label></div>
-                            <div className="relative"><textarea value={bio} onChange={e => setBio(e.target.value)} className="w-full bg-transparent border border-gray-700 rounded p-3 text-white h-24" placeholder="Bio"></textarea></div>
-                            <button type="submit" className="w-full bg-white text-black font-bold py-3 rounded-full mt-4 hover:bg-gray-200">Next</button>
-                        </form>
+                <>
+                    {/* Desktop Sidebar */}
+                    <div className="hidden md:flex flex-col w-64 h-screen fixed left-0 top-0 border-r border-gray-800 p-4 justify-between z-40 bg-black">
+                        <div className="space-y-4">
+                            <div className="p-3 w-min hover:bg-blue-900/20 rounded-full cursor-pointer transition-colors" onClick={()=>setPage('home')}>
+                                <Icons.Zap size={32} className="text-[#1d9bf0] fill-current" />
+                            </div>
+                            <nav className="space-y-2">
+                                {menu.map(item => (
+                                    <div key={item.id} onClick={() => setPage(item.id)} 
+                                        className={`flex items-center gap-4 p-3 rounded-full cursor-pointer transition-all hover:bg-white/10 ${page===item.id ? 'font-bold' : ''}`}>
+                                        {item.icon} <span className="text-xl">{item.label}</span>
+                                    </div>
+                                ))}
+                            </nav>
+                            <Button size="lg" className="mt-4 shadow-lg" onClick={()=>setPage('compose')}>Buzz</Button>
+                        </div>
+                        <div className="flex items-center gap-3 p-3 rounded-full hover:bg-white/10 cursor-pointer" onClick={() => auth.signOut()}>
+                            <Avatar src={user.photoURL} name={user.displayName} size="md" />
+                            <div className="flex-1 overflow-hidden">
+                                <div className="font-bold truncate">{user.displayName}</div>
+                                <div className="text-gray-500 text-sm truncate">@{user.handle}</div>
+                            </div>
+                            <Icons.LogOut size={18} />
+                        </div>
                     </div>
-                </div>
+
+                    {/* Mobile Bottom Nav */}
+                    <div className="md:hidden fixed bottom-0 left-0 w-full bg-black/90 backdrop-blur-lg border-t border-gray-800 flex justify-around p-3 z-50">
+                        {menu.map(item => (
+                            <div key={item.id} onClick={() => setPage(item.id)} className={`p-2 rounded-full ${page===item.id ? 'text-[#1d9bf0]' : 'text-gray-400'}`}>
+                                {React.cloneElement(item.icon, { size: 24 })}
+                            </div>
+                        ))}
+                    </div>
+                </>
             );
         };
 
-        function App() {
-            const [user, setUser] = useState(null);
-            const [userProfile, setUserProfile] = useState(null);
-            const [loading, setLoading] = useState(true);
-            const [view, setView] = useState('home');
-            const [buzzes, setBuzzes] = useState([]);
-            const [notifications, setNotifications] = useState([]);
-            const [replyModalBuzz, setReplyModalBuzz] = useState(null);
-            const [editingProfile, setEditingProfile] = useState(false);
-            const [usersCache, setUsersCache] = useState({});
-            const [chats, setChats] = useState([]);
-            const [activeChat, setActiveChat] = useState(null);
-            const [messages, setMessages] = useState([]);
-            const [chatInput, setChatInput] = useState('');
-            const [newMessageUser, setNewMessageUser] = useState(false);
+        const BuzzComposer = ({ user, onSuccess }) => {
+            const [text, setText] = useState('');
+            const [img, setImg] = useState(null);
+            const [loading, setLoading] = useState(false);
+            const ref = useRef();
+            const toast = useContext(ToastContext);
 
-            useEffect(() => {
-                const unsubscribe = auth.onAuthStateChanged(async (u) => {
-                    setUser(u);
-                    if (u) {
-                        try {
-                            // User Profile Logic
-                            const userRef = db.collection(...PUBLIC_DATA_PATH, USER_COLLECTION).doc(u.uid);
-                            const snap = await userRef.get();
-                            if(snap.exists) setUserProfile({id: snap.id, ...snap.data()});
-                            else setUserProfile(null);
-
-                            // Listeners
-                            const usersRef = db.collection(...PUBLIC_DATA_PATH, USER_COLLECTION);
-                            usersRef.onSnapshot(snap => {
-                                const cache = {};
-                                snap.docs.forEach(d => cache[d.id] = {id: d.id, ...d.data()});
-                                setUsersCache(cache);
-                                if(cache[u.uid]) setUserProfile(cache[u.uid]);
-                            });
-
-                            const buzzRef = db.collection(...PUBLIC_DATA_PATH, BUZZ_COLLECTION);
-                            buzzRef.onSnapshot(snap => {
-                                setBuzzes(snap.docs.map(d => ({id: d.id, ...d.data()})).sort((a,b) => b.createdAt - a.createdAt));
-                            });
-
-                            const notifRef = db.collection(...PUBLIC_DATA_PATH, NOTIF_COLLECTION);
-                            notifRef.onSnapshot(snap => {
-                                setNotifications(snap.docs.map(d => ({id: d.id, ...d.data()})).filter(n => n.recipientId === u.uid).sort((a,b) => b.createdAt - a.createdAt));
-                            });
-
-                            const chatsRef = db.collection(...PUBLIC_DATA_PATH, CHAT_COLLECTION);
-                            chatsRef.onSnapshot(snap => {
-                                setChats(snap.docs.map(d => ({id: d.id, ...d.data()})).filter(c => c.participants.includes(u.uid)).sort((a,b) => b.updatedAt - a.updatedAt));
-                            });
-
-                        } catch(e) { console.error("Data load error", e); }
-                    }
-                    setLoading(false);
-                });
-                return () => unsubscribe();
-            }, []);
-
-            // Chat Messages Effect
-            useEffect(() => {
-                if(!activeChat) return;
-                const msgsRef = db.collection(...PUBLIC_DATA_PATH, CHAT_COLLECTION).doc(activeChat.id).collection('messages');
-                const unsub = msgsRef.onSnapshot(snap => {
-                    setMessages(snap.docs.map(d => ({id: d.id, ...d.data()})).sort((a,b) => a.createdAt - b.createdAt));
-                });
-                return () => unsub();
-            }, [activeChat]);
-
-            const handleCreateProfile = async (data) => {
-                await db.collection(...PUBLIC_DATA_PATH, USER_COLLECTION).doc(user.uid).set(data);
-                setUserProfile(data);
-            };
-
-            const handleUpdateProfile = async (updates) => {
-                await db.collection(...PUBLIC_DATA_PATH, USER_COLLECTION).doc(user.uid).update(updates);
-            };
-
-            const handlePost = async (text, image = null, replyTo = null) => {
-                const mentions = text.match(/@(\w+)/g) || [];
-                const hashtags = text.match(/#(\w+)/g) || [];
-                const mentionedUids = [];
-                mentions.forEach(m => {
-                    const handle = m.substring(1).toLowerCase();
-                    const mentionedUser = Object.values(usersCache).find(u => u.handle === handle);
-                    if(mentionedUser) mentionedUids.push(mentionedUser.uid);
-                });
-
-                const newBuzz = {
-                    uid: user.uid,
-                    authorName: userProfile.displayName,
-                    authorHandle: userProfile.handle,
-                    authorPhoto: userProfile.photoURL,
-                    content: text,
-                    image: image,
-                    likes: [],
-                    rebuzzes: [],
-                    replyCount: 0,
-                    replyTo: replyTo ? replyTo.id : null,
-                    hashtags,
-                    mentions,
-                    createdAt: Date.now()
-                };
-
-                const ref = await db.collection(...PUBLIC_DATA_PATH, BUZZ_COLLECTION).add(newBuzz);
-
-                if (replyTo) {
-                    await db.collection(...PUBLIC_DATA_PATH, NOTIF_COLLECTION).add({
-                        type: 'reply', actorId: user.uid, actorName: userProfile.displayName, recipientId: replyTo.uid, buzzId: ref.id, previewText: text, createdAt: Date.now(), read: false
+            const handlePost = async () => {
+                if ((!text.trim() && !img) || loading) return;
+                setLoading(true);
+                try {
+                    const hashtags = text.match(/#(\w+)/g) || [];
+                    await db.collection(...PATH.BUZZES).add({
+                        uid: user.uid,
+                        authorName: user.displayName,
+                        authorHandle: user.handle,
+                        authorPhoto: user.photoURL,
+                        content: text,
+                        image: img,
+                        hashtags,
+                        likes: [],
+                        rebuzzes: [],
+                        replyCount: 0,
+                        createdAt: Date.now()
                     });
+                    setText(''); setImg(null);
+                    if(onSuccess) onSuccess();
+                    toast('Buzz Sent!', 'success');
+                } catch(e) {
+                    toast('Failed to post', 'error');
                 }
-                mentionedUids.forEach(async (uid) => {
-                    if (uid !== user.uid && uid !== replyTo?.uid) {
-                        await db.collection(...PUBLIC_DATA_PATH, NOTIF_COLLECTION).add({
-                            type: 'mention', actorId: user.uid, actorName: userProfile.displayName, recipientId: uid, buzzId: ref.id, previewText: text, createdAt: Date.now(), read: false
+                setLoading(false);
+            };
+
+            const handleFile = async (e) => {
+                if(e.target.files[0]) {
+                    const base64 = await compressImg(e.target.files[0]);
+                    setImg(base64);
+                }
+            };
+
+            return (
+                <div className="border-b border-gray-800 p-4 flex gap-4">
+                    <Avatar src={user.photoURL} name={user.displayName} />
+                    <div className="flex-1">
+                        <textarea 
+                            value={text} 
+                            onChange={e => setText(e.target.value)} 
+                            placeholder="What is happening?!" 
+                            className="w-full bg-transparent text-xl placeholder-gray-600 outline-none resize-none min-h-[100px]"
+                        />
+                        {img && (
+                            <div className="relative mt-2 mb-4 group">
+                                <img src={img} className="rounded-2xl border border-gray-800 max-h-64 object-cover" />
+                                <button onClick={()=>setImg(null)} className="absolute top-2 right-2 bg-black/70 p-1 rounded-full text-white hover:bg-black"><Icons.X size={16}/></button>
+                            </div>
+                        )}
+                        <div className="flex justify-between items-center border-t border-gray-800 pt-3">
+                            <div className="text-[#1d9bf0] cursor-pointer hover:bg-blue-900/20 p-2 rounded-full transition-colors" onClick={()=>ref.current.click()}>
+                                <Icons.Image size={20} />
+                                <input type="file" ref={ref} className="hidden" accept="image/*" onChange={handleFile} />
+                            </div>
+                            <Button onClick={handlePost} disabled={loading || (!text && !img)} size="sm">
+                                {loading ? 'Buzzing...' : 'Buzz'}
+                            </Button>
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        const BuzzItem = ({ data, user, setReplyModal }) => {
+            const [likes, setLikes] = useState(data.likes || []);
+            const toast = useContext(ToastContext);
+            const isLiked = likes.includes(user.uid);
+
+            const toggleLike = async (e) => {
+                e.stopPropagation();
+                const newLikes = isLiked ? likes.filter(id => id !== user.uid) : [...likes, user.uid];
+                setLikes(newLikes); // Optimistic UI
+                try {
+                    const ref = db.collection(...PATH.BUZZES).doc(data.id);
+                    await ref.update({ likes: isLiked ? firebase.firestore.FieldValue.arrayRemove(user.uid) : firebase.firestore.FieldValue.arrayUnion(user.uid) });
+                    if(!isLiked && data.uid !== user.uid) {
+                        db.collection(...PATH.NOTIFS).add({
+                            recipientId: data.uid,
+                            actorId: user.uid,
+                            actorName: user.displayName,
+                            type: 'like',
+                            preview: data.content,
+                            createdAt: Date.now(),
+                            read: false
                         });
                     }
-                });
-            };
-
-            const startChat = async (targetUser) => {
-                const existing = chats.find(c => c.participants.includes(targetUser.uid));
-                if(existing) { setActiveChat(existing); setNewMessageUser(false); }
-                else {
-                    const newChat = { participants: [user.uid, targetUser.uid], updatedAt: Date.now(), lastMessage: 'Started a conversation' };
-                    const ref = await db.collection(...PUBLIC_DATA_PATH, CHAT_COLLECTION).add(newChat);
-                    setActiveChat({id: ref.id, ...newChat});
-                    setNewMessageUser(false);
+                } catch(err) {
+                    setLikes(likes); // Revert
+                    toast('Action failed', 'error');
                 }
             };
 
-            const sendMessage = async () => {
-                if(!chatInput.trim() || !activeChat) return;
-                const txt = chatInput; setChatInput('');
-                await db.collection(...PUBLIC_DATA_PATH, CHAT_COLLECTION).doc(activeChat.id).collection('messages').add({ text: txt, senderId: user.uid, createdAt: Date.now() });
-                await db.collection(...PUBLIC_DATA_PATH, CHAT_COLLECTION).doc(activeChat.id).update({ lastMessage: txt, updatedAt: Date.now() });
+            const parseText = (txt) => {
+                if(!txt) return null;
+                return txt.split(/((?:#[a-zA-Z0-9_]+)|(?:@[a-zA-Z0-9_]+))/g).map((part, i) => 
+                    (part.startsWith('#') || part.startsWith('@')) ? <span key={i} className="text-[#1d9bf0] hover:underline cursor-pointer">{part}</span> : part
+                );
             };
-
-            const handleDelete = async (id) => { if(window.confirm("Delete?")) await db.collection(...PUBLIC_DATA_PATH, BUZZ_COLLECTION).doc(id).delete(); };
-
-            const handleLike = async (buzz) => {
-                const ref = db.collection(...PUBLIC_DATA_PATH, BUZZ_COLLECTION).doc(buzz.id);
-                if(buzz.likes?.includes(user.uid)) { await ref.update({ likes: firebase.firestore.FieldValue.arrayRemove(user.uid) }); }
-                else {
-                    await ref.update({ likes: firebase.firestore.FieldValue.arrayUnion(user.uid) });
-                    if(buzz.uid !== user.uid) { await db.collection(...PUBLIC_DATA_PATH, NOTIF_COLLECTION).add({ type: 'like', actorId: user.uid, actorName: userProfile.displayName, recipientId: buzz.uid, buzzId: buzz.id, previewText: buzz.content, createdAt: Date.now(), read: false }); }
-                }
-            };
-
-            const handleRebuzz = async (buzz) => {
-                const ref = db.collection(...PUBLIC_DATA_PATH, BUZZ_COLLECTION).doc(buzz.id);
-                if(buzz.rebuzzes?.includes(user.uid)) { await ref.update({ rebuzzes: firebase.firestore.FieldValue.arrayRemove(user.uid) }); }
-                else {
-                    await ref.update({ rebuzzes: firebase.firestore.FieldValue.arrayUnion(user.uid) });
-                    if(buzz.uid !== user.uid) { await db.collection(...PUBLIC_DATA_PATH, NOTIF_COLLECTION).add({ type: 'rebuzz', actorId: user.uid, actorName: userProfile.displayName, recipientId: buzz.uid, buzzId: buzz.id, previewText: buzz.content, createdAt: Date.now(), read: false }); }
-                }
-            };
-
-            if (loading) return <div className="min-h-screen bg-black flex items-center justify-center text-blue-500"><Icons.Zap className="animate-pulse w-12 h-12 fill-current" /></div>;
-            if (!user) return <LoginScreen />;
-            if (user && !userProfile) return <CreateProfileScreen authUser={user} onComplete={handleCreateProfile} />;
-
-            const visibleBuzzes = view === 'profile' ? buzzes.filter(b => b.uid === user.uid) : buzzes.filter(b => !b.replyTo);
 
             return (
-                <div className="min-h-screen bg-black text-white font-sans flex justify-center">
-                    <div className="flex w-full max-w-7xl">
-                        <Sidebar view={view} setView={setView} currentUser={userProfile} unreadCount={notifications.filter(n => !n.read).length} onLogout={() => auth.signOut()} />
-                        <main className="flex-1 w-full max-w-[600px] border-x border-gray-800 min-h-screen pb-20 md:pb-0 relative">
-                            <div className="sticky top-0 z-30 bg-black/80 backdrop-blur-md border-b border-gray-800 px-4 py-3 cursor-pointer" onClick={() => window.scrollTo(0,0)}><h2 className="text-xl font-bold capitalize">{view}</h2></div>
-                            {view === 'home' && <><ComposeBuzz userProfile={userProfile} onPost={handlePost} />{visibleBuzzes.map(b => <Buzz key={b.id} buzz={b} currentUser={user} onLike={handleLike} onRebuzz={handleRebuzz} onReply={setReplyModalBuzz} onDelete={handleDelete} />)}</>}
-                            {view === 'profile' && (
-                                <div className="pb-20">
-                                    <div className="h-48 bg-gray-800 relative">{userProfile.bannerURL && <img src={userProfile.bannerURL} className="w-full h-full object-cover" />}<div className="absolute -bottom-16 left-4"><div className="p-1 bg-black rounded-full"><Avatar src={userProfile.photoURL} name={userProfile.displayName} size="lg" /></div></div></div>
-                                    <div className="flex justify-end p-4"><button onClick={() => setEditingProfile(true)} className="border border-gray-600 font-bold px-4 py-1.5 rounded-full hover:bg-gray-900 transition-colors">Edit profile</button></div>
-                                    <div className="px-4 mt-2"><h2 className="text-2xl font-bold">{userProfile.displayName}</h2><p className="text-gray-500">@{userProfile.handle}</p>{userProfile.bio && <p className="mt-3 text-white whitespace-pre-wrap">{userProfile.bio}</p>}</div>
-                                    <div className="border-b border-gray-800 mt-4 flex"><div className="px-4 py-3 font-bold border-b-4 border-blue-500 flex-1 text-center">Buzzes</div></div>
-                                    {visibleBuzzes.map(b => <Buzz key={b.id} buzz={b} currentUser={user} onLike={handleLike} onRebuzz={handleRebuzz} onReply={setReplyModalBuzz} onDelete={handleDelete} />)}
+                <div className="border-b border-gray-800 p-4 hover:bg-white/[0.03] transition-colors cursor-pointer animate-fade-in">
+                    <div className="flex gap-3">
+                        <Avatar src={data.authorPhoto} name={data.authorName} />
+                        <div className="flex-1 min-w-0">
+                            <div className="flex justify-between items-start">
+                                <div className="flex gap-1 items-center truncate">
+                                    <span className="font-bold hover:underline">{data.authorName}</span>
+                                    <span className="text-gray-500 text-sm">@{data.authorHandle}</span>
+                                    <span className="text-gray-500 text-sm">· {formatTime(data.createdAt)}</span>
+                                </div>
+                                {user.uid === data.uid && (
+                                    <button className="text-gray-500 hover:text-red-500 transition-colors" onClick={(e) => {
+                                        e.stopPropagation();
+                                        if(confirm('Delete?')) db.collection(...PATH.BUZZES).doc(data.id).delete();
+                                    }}><Icons.Trash size={16} /></button>
+                                )}
+                            </div>
+                            <div className="mt-1 whitespace-pre-wrap text-[15px] leading-relaxed">
+                                {parseText(data.content)}
+                            </div>
+                            {data.image && (
+                                <div className="mt-3 rounded-2xl overflow-hidden border border-gray-800">
+                                    <img src={data.image} className="w-full max-h-[500px] object-cover" />
                                 </div>
                             )}
-                            {view === 'messages' && (
-                                <div className="h-full flex flex-col min-h-[80vh]">
-                                    {!activeChat ? (
-                                        <div className="p-4">
-                                            <div className="flex justify-between mb-4 items-center"><h2 className="text-2xl font-bold">Messages</h2><button onClick={() => setNewMessageUser(true)} className="p-2 hover:bg-gray-800 rounded-full"><Icons.Mail size={20}/></button></div>
-                                            {chats.length === 0 ? <div className="text-center mt-10 text-gray-500"><h3>Welcome to your inbox!</h3><button onClick={() => setNewMessageUser(true)} className="mt-6 bg-blue-500 text-white font-bold py-3 px-8 rounded-full">Write a message</button></div> : 
-                                            <div className="space-y-2">{chats.map(c => { const other = usersCache[c.participants.find(p => p !== user.uid)]; return <div key={c.id} onClick={() => setActiveChat(c)} className="flex gap-3 p-3 hover:bg-gray-900 cursor-pointer rounded-lg"><Avatar src={other?.photoURL} name={other?.displayName} /><div className="overflow-hidden"><div className="font-bold">{other?.displayName}</div><div className="text-gray-500 truncate">{c.lastMessage}</div></div></div>; })}</div>}
-                                        </div>
-                                    ) : (
-                                        <div className="flex flex-col h-[calc(100vh-60px)] md:h-screen absolute inset-0 bg-black z-20">
-                                            <div className="flex items-center gap-4 p-3 border-b border-gray-800 bg-black/80"><button onClick={() => setActiveChat(null)}><Icons.Repeat2 className="rotate-90" /></button><span className="font-bold">Chat</span></div>
-                                            <div className="flex-1 overflow-y-auto p-4 space-y-4 flex flex-col-reverse no-scrollbar">{[...messages].reverse().map(m => <div key={m.id} className={`max-w-[70%] p-3 rounded-2xl ${m.senderId === user.uid ? 'bg-blue-500 text-white self-end' : 'bg-gray-800 text-white'}`}>{m.text}</div>)}</div>
-                                            <div className="p-3 border-t border-gray-800 bg-black flex gap-2"><input className="flex-1 bg-gray-900 rounded-full px-4 py-2 outline-none text-white" value={chatInput} onChange={e => setChatInput(e.target.value)} /><button onClick={sendMessage} className="text-blue-500 p-2"><Icons.Send /></button></div>
-                                        </div>
-                                    )}
-                                    {newMessageUser && <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4" onClick={() => setNewMessageUser(false)}><div className="bg-black border border-gray-700 w-full max-w-lg rounded-2xl h-[60vh] flex flex-col" onClick={e => e.stopPropagation()}><div className="p-4 border-b border-gray-700 flex justify-between"><h2 className="font-bold">New Message</h2><button onClick={() => setNewMessageUser(false)}><Icons.X /></button></div><div className="p-4 flex-1 overflow-y-auto">{Object.values(usersCache).filter(u => u.uid !== user.uid).map(u => <div key={u.uid} onClick={() => startChat(u)} className="flex items-center gap-3 p-3 hover:bg-gray-900 cursor-pointer rounded-lg"><Avatar src={u.photoURL} name={u.displayName} /><div className="font-bold">{u.displayName}</div></div>)}</div></div></div>}
-                                </div>
-                            )}
-                            {view === 'notifications' && <div className="divide-y divide-gray-800">{notifications.map(n => <div key={n.id} className="p-4 flex gap-3 hover:bg-gray-900/30"><div className="mt-1"><Icons.Bell className="text-blue-500" /></div><div><div className="font-bold">{n.actorName}</div><div className="text-gray-500">{n.previewText}</div></div></div>)}</div>}
-                        </main>
-                        <div className="hidden lg:block w-[350px] pl-8 py-4"><div className="bg-gray-900 rounded-2xl p-4"><h3 className="font-bold text-xl mb-4">Who to follow</h3>{Object.values(usersCache).slice(0, 3).filter(u => u.uid !== user?.uid).map(u => <div key={u.uid} className="flex items-center justify-between py-3 hover:bg-white/5 cursor-pointer"><div className="flex items-center gap-2"><Avatar src={u.photoURL} name={u.displayName} /><div className="font-bold">{u.displayName}</div></div><button className="bg-white text-black px-4 py-1.5 rounded-full font-bold text-sm">Follow</button></div>)}</div></div>
+                            <div className="flex justify-between mt-3 max-w-md text-gray-500">
+                                <button className="flex items-center gap-2 group hover:text-[#1d9bf0]" onClick={e => { e.stopPropagation(); setReplyModal(data); }}>
+                                    <div className="p-2 rounded-full group-hover:bg-[#1d9bf0]/10 transition-colors"><Icons.Message size={18} /></div>
+                                    <span className="text-xs">{data.replyCount||0}</span>
+                                </button>
+                                <button className={`flex items-center gap-2 group ${isLiked ? 'text-pink-600' : 'hover:text-pink-600'}`} onClick={toggleLike}>
+                                    <div className="p-2 rounded-full group-hover:bg-pink-600/10 transition-colors">
+                                        <Icons.Heart size={18} className={isLiked ? 'fill-current' : ''} />
+                                    </div>
+                                    <span className="text-xs">{likes.length||0}</span>
+                                </button>
+                                <button className="flex items-center gap-2 group hover:text-green-500">
+                                    <div className="p-2 rounded-full group-hover:bg-green-500/10 transition-colors"><Icons.Repeat size={18} /></div>
+                                    <span className="text-xs">{data.rebuzzes?.length||0}</span>
+                                </button>
+                            </div>
+                        </div>
                     </div>
-                    {replyModalBuzz && <div className="fixed inset-0 bg-blue-500/10 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={() => setReplyModalBuzz(null)}><div className="bg-black border border-gray-700 w-full max-w-lg rounded-2xl p-4 shadow-2xl relative" onClick={e => e.stopPropagation()}><div className="pl-12 pt-8"><p className="mb-4">{replyModalBuzz.content}</p><div className="flex gap-4"><Avatar src={userProfile?.photoURL} name={userProfile?.displayName} /><textarea id="replyInput" placeholder="Buzz your reply" className="w-full bg-transparent outline-none text-xl min-h-[100px] resize-none" autoFocus></textarea></div></div><div className="flex justify-end p-2"><button onClick={() => { const val = document.getElementById('replyInput').value; if(val) { handlePost(val, null, replyModalBuzz); setReplyModalBuzz(null); } }} className="bg-blue-500 text-white font-bold px-4 py-2 rounded-full">Reply</button></div></div></div>}
-                    {editingProfile && <EditProfileModal userProfile={userProfile} onClose={() => setEditingProfile(false)} onSave={handleUpdateProfile} />}
                 </div>
             );
-        }
+        };
 
-        ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+        const EditProfile = ({ user, close }) => {
+            const [data, setData] = useState({ displayName: user.displayName, bio: user.bio||'', location: user.location||'', website: user.website||'' });
+            const [pfp, setPfp] = useState(user.photoURL);
+            const [banner, setBanner] = useState(user.bannerURL);
+            const [loading, setLoading] = useState(false);
+            const toast = useContext(ToastContext);
+
+            const handleSave = async () => {
+                setLoading(true);
+                try {
+                    await db.collection(...PATH.USERS).doc(user.uid).update({ ...data, photoURL: pfp, bannerURL: banner });
+                    toast('Profile Updated', 'success');
+                    close();
+                } catch(e) { toast('Update failed', 'error'); }
+                setLoading(false);
+            };
+
+            const handleImg = async (e, type) => {
+                if(e.target.files[0]) {
+                    const b64 = await compressImg(e.target.files[0], type === 'banner' ? 1000 : 400);
+                    type === 'banner' ? setBanner(b64) : setPfp(b64);
+                }
+            };
+
+            return (
+                <div className="space-y-4">
+                    <div className="h-32 bg-gray-800 relative group cursor-pointer" onClick={() => document.getElementById('bInput').click()}>
+                        {banner ? <img src={banner} className="w-full h-full object-cover" /> : <div className="flex items-center justify-center h-full text-gray-500"><Icons.Image /></div>}
+                        <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"><Icons.Camera size={30} className="text-white" /></div>
+                        <input id="bInput" type="file" className="hidden" onChange={e => handleImg(e, 'banner')} />
+                    </div>
+                    <div className="px-4 relative -mt-16">
+                        <div className="w-24 h-24 rounded-full border-4 border-black relative group cursor-pointer" onClick={() => document.getElementById('pInput').click()}>
+                            <Avatar src={pfp} name={data.displayName} size="custom" className="w-full h-full" />
+                            <div className="absolute inset-0 bg-black/40 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"><Icons.Camera size={20} className="text-white" /></div>
+                            <input id="pInput" type="file" className="hidden" onChange={e => handleImg(e, 'pfp')} />
+                        </div>
+                    </div>
+                    <div className="px-4 space-y-4 pb-4">
+                        <div className="border border-gray-700 rounded px-2 pt-1 pb-2 focus-within:border-[#1d9bf0] transition-colors">
+                            <label className="text-xs text-gray-500">Name</label>
+                            <input className="w-full bg-transparent outline-none text-white" value={data.displayName} onChange={e => setData({...data, displayName: e.target.value})} />
+                        </div>
+                        <div className="border border-gray-700 rounded px-2 pt-1 pb-2 focus-within:border-[#1d9bf0] transition-colors">
+                            <label className="text-xs text-gray-500">Bio</label>
+                            <textarea className="w-full bg-transparent outline-none text-white resize-none h-20" value={data.bio} onChange={e => setData({...data, bio: e.target.value})} />
+                        </div>
+                        <div className="border border-gray-700 rounded px-2 pt-1 pb-2 focus-within:border-[#1d9bf0] transition-colors">
+                            <label className="text-xs text-gray-500">Location</label>
+                            <input className="w-full bg-transparent outline-none text-white" value={data.location} onChange={e => setData({...data, location: e.target.value})} />
+                        </div>
+                        <Button onClick={handleSave} disabled={loading} size="lg">{loading ? 'Saving...' : 'Save'}</Button>
+                    </div>
+                </div>
+            );
+        };
+
+        // --- MAIN APP LOGIC ---
+
+        const App = () => {
+            const [user, setUser] = useState(null);
+            const [userData, setUserData] = useState(null);
+            const [page, setPage] = useState('home');
+            const [feed, setFeed] = useState([]);
+            const [usersCache, setUsersCache] = useState({});
+            const [modal, setModal] = useState(null); // { type: 'edit' | 'reply', data: any }
+            
+            // Initial Auth Check
+            useEffect(() => {
+                return auth.onAuthStateChanged(async (u) => {
+                    setUser(u);
+                    if (u) {
+                        // Create user doc if not exists
+                        const ref = db.collection(...PATH.USERS).doc(u.uid);
+                        const docSnap = await ref.get();
+                        if (!docSnap.exists) {
+                            // First time setup UI
+                            setModal({ type: 'setup', data: u });
+                        } else {
+                            setUserData({ id: docSnap.id, ...docSnap.data() });
+                        }
+
+                        // Listeners
+                        const unsubUsers = db.collection(...PATH.USERS).onSnapshot(snap => {
+                            const cache = {};
+                            snap.docs.forEach(d => cache[d.id] = { id: d.id, ...d.data() });
+                            setUsersCache(cache);
+                            if (cache[u.uid]) setUserData(cache[u.uid]);
+                        });
+
+                        const unsubFeed = db.collection(...PATH.BUZZES).orderBy('createdAt', 'desc').limit(50).onSnapshot(snap => {
+                            setFeed(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+                        });
+
+                        return () => { unsubUsers(); unsubFeed(); };
+                    }
+                });
+            }, []);
+
+            const handleSetup = async (e) => {
+                e.preventDefault();
+                const formData = new FormData(e.target);
+                const handle = formData.get('handle').toLowerCase().replace('@','');
+                const displayName = formData.get('name');
+                
+                await db.collection(...PATH.USERS).doc(user.uid).set({
+                    uid: user.uid,
+                    displayName,
+                    handle,
+                    email: user.email,
+                    photoURL: user.photoURL,
+                    createdAt: Date.now(),
+                    bio: '',
+                    followers: [],
+                    following: []
+                });
+                setModal(null);
+            };
+
+            // Login View
+            if (!user) {
+                return (
+                    <div className="min-h-screen flex items-center justify-center p-4">
+                        <div className="w-full max-w-md text-center space-y-8 animate-fade-in">
+                            <Icons.Zap size={60} className="mx-auto text-white fill-current" />
+                            <h1 className="text-5xl font-extrabold">Happening now</h1>
+                            <h2 className="text-2xl font-bold">Join Pulse today.</h2>
+                            <Button size="lg" variant="secondary" onClick={() => auth.signInWithPopup(new firebase.auth.GoogleAuthProvider())} className="text-black">
+                                Sign up with Google
+                            </Button>
+                        </div>
+                    </div>
+                );
+            }
+
+            // Setup View
+            if (modal?.type === 'setup') {
+                return (
+                    <div className="min-h-screen flex items-center justify-center bg-black p-4">
+                        <form onSubmit={handleSetup} className="w-full max-w-md bg-black border border-gray-800 p-8 rounded-2xl space-y-6 animate-fade-in">
+                            <Icons.Zap size={40} className="text-white" />
+                            <h2 className="text-2xl font-bold">Create your account</h2>
+                            <div className="space-y-4">
+                                <div className="border border-gray-700 rounded px-3 py-2 focus-within:border-[#1d9bf0]">
+                                    <label className="text-xs text-gray-500">Name</label>
+                                    <input name="name" defaultValue={user.displayName} className="w-full bg-transparent outline-none text-white" required />
+                                </div>
+                                <div className="border border-gray-700 rounded px-3 py-2 focus-within:border-[#1d9bf0]">
+                                    <label className="text-xs text-gray-500">Handle</label>
+                                    <input name="handle" placeholder="username" className="w-full bg-transparent outline-none text-white" required />
+                                </div>
+                            </div>
+                            <Button size="lg" className="w-full">Next</Button>
+                        </form>
+                    </div>
+                );
+            }
+
+            if (!userData) return <div className="h-screen flex items-center justify-center text-[#1d9bf0]"><Icons.Zap className="animate-pulse w-12 h-12" /></div>;
+
+            // Main Layout
+            return (
+                <ToastProvider>
+                    <div className="flex justify-center min-h-screen w-full">
+                        <Sidebar page={page} setPage={setPage} user={userData} />
+                        
+                        {/* Feed / Main Content */}
+                        <main className="w-full md:w-[600px] border-x border-gray-800 min-h-screen pb-20 md:pb-0 md:ml-64 relative">
+                            <div className="sticky top-0 z-30 bg-black/80 backdrop-blur-md border-b border-gray-800 px-4 py-3 cursor-pointer" onClick={()=>window.scrollTo(0,0)}>
+                                <h2 className="text-xl font-bold capitalize">{page}</h2>
+                            </div>
+
+                            {page === 'home' && (
+                                <>
+                                    <div className="hidden md:block"><BuzzComposer user={userData} /></div>
+                                    <div className="divide-y divide-gray-800">
+                                        {feed.map(item => (
+                                            <BuzzItem key={item.id} data={item} user={userData} setReplyModal={item => setModal({ type: 'reply', data: item })} />
+                                        ))}
+                                    </div>
+                                </>
+                            )}
+
+                            {page === 'compose' && (
+                                <div className="p-4 md:hidden">
+                                    <BuzzComposer user={userData} onSuccess={() => setPage('home')} />
+                                </div>
+                            )}
+
+                            {page === 'explore' && (
+                                <div className="p-4 text-center text-gray-500">
+                                    <div className="border border-gray-800 rounded-full flex items-center px-4 py-2 mb-6 text-white focus-within:border-[#1d9bf0] transition-colors">
+                                        <Icons.Search size={20} className="mr-3 text-gray-500" />
+                                        <input placeholder="Search Pulse" className="bg-transparent w-full outline-none" />
+                                    </div>
+                                    <h3 className="text-xl font-bold text-white mb-4 text-left">Trends for you</h3>
+                                    {[1,2,3,4,5].map(i => (
+                                        <div key={i} className="py-3 text-left hover:bg-white/5 -mx-4 px-4 cursor-pointer transition-colors">
+                                            <div className="text-xs text-gray-500">Trending in Tech</div>
+                                            <div className="font-bold text-white">#WebDevelopment</div>
+                                            <div className="text-xs text-gray-500">54.2K Buzzes</div>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+
+                            {page === 'profile' && (
+                                <div>
+                                    <div className="h-48 bg-gray-800 relative">
+                                        {userData.bannerURL && <img src={userData.bannerURL} className="w-full h-full object-cover" />}
+                                        <div className="absolute -bottom-16 left-4">
+                                            <Avatar src={userData.photoURL} name={userData.displayName} size="xl" className="border-4 border-black" />
+                                        </div>
+                                    </div>
+                                    <div className="flex justify-end p-4">
+                                        <Button variant="outline" size="sm" onClick={() => setModal({ type: 'edit' })}>Edit Profile</Button>
+                                    </div>
+                                    <div className="px-4 mt-2 mb-6">
+                                        <h2 className="text-2xl font-bold leading-none">{userData.displayName}</h2>
+                                        <div className="text-gray-500 mb-3">@{userData.handle}</div>
+                                        {userData.bio && <p className="text-white mb-3">{userData.bio}</p>}
+                                        <div className="flex gap-4 text-gray-500 text-sm">
+                                            {userData.location && <div className="flex items-center gap-1"><Icons.MapPin size={14}/> {userData.location}</div>}
+                                            {userData.website && <div className="flex items-center gap-1"><Icons.Link size={14}/> <a href={userData.website} target="_blank" className="text-[#1d9bf0]">{userData.website}</a></div>}
+                                            <div className="flex items-center gap-1"><Icons.Calendar size={14}/> Joined {new Date(userData.createdAt).toLocaleDateString()}</div>
+                                        </div>
+                                        <div className="flex gap-4 mt-3 text-sm">
+                                            <span><b className="text-white">142</b> Following</span>
+                                            <span><b className="text-white">8,402</b> Followers</span>
+                                        </div>
+                                    </div>
+                                    {/* Profile Tabs */}
+                                    <div className="flex border-b border-gray-800">
+                                        {['Buzzes', 'Replies', 'Media', 'Likes'].map((tab, i) => (
+                                            <div key={tab} className={`flex-1 text-center py-4 font-bold cursor-pointer hover:bg-white/5 transition-colors relative ${i===0 ? 'text-white' : 'text-gray-500'}`}>
+                                                {tab}
+                                                {i===0 && <div className="absolute bottom-0 left-0 w-full h-1 bg-[#1d9bf0] rounded-full"></div>}
+                                            </div>
+                                        ))}
+                                    </div>
+                                    <div className="divide-y divide-gray-800">
+                                        {feed.filter(f => f.uid === userData.uid).map(item => (
+                                            <BuzzItem key={item.id} data={item} user={userData} setReplyModal={item => setModal({ type: 'reply', data: item })} />
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
+
+                            {page === 'notifications' && (
+                                <div className="flex flex-col items-center justify-center py-20 text-gray-500">
+                                    <Icons.Bell size={48} className="mb-4" />
+                                    <h3 className="text-2xl font-bold text-white">Nothing to see here yet</h3>
+                                    <p>From likes to rebuzzes, you'll find it all here.</p>
+                                </div>
+                            )}
+                            
+                            {page === 'messages' && (
+                                <div className="flex flex-col items-center justify-center py-20 text-gray-500">
+                                    <Icons.Mail size={48} className="mb-4" />
+                                    <h3 className="text-2xl font-bold text-white">Welcome to your inbox!</h3>
+                                    <p className="max-w-xs text-center mb-6">Drop a line, share Tweets and more with private conversations.</p>
+                                    <Button size="md">Write a message</Button>
+                                </div>
+                            )}
+                        </main>
+
+                        {/* Right Sidebar (Trends) */}
+                        <div className="hidden lg:block w-[350px] pl-8 py-4 mr-10">
+                            <div className="sticky top-4 space-y-4">
+                                <div className="bg-gray-900 rounded-full flex items-center px-4 py-3 text-gray-500 focus-within:bg-black focus-within:ring-1 focus-within:ring-[#1d9bf0] border border-transparent focus-within:border-[#1d9bf0] transition-all">
+                                    <Icons.Search size={18} className="mr-3" />
+                                    <input placeholder="Search Pulse" className="bg-transparent outline-none w-full text-white" />
+                                </div>
+
+                                <div className="bg-[#16181c] rounded-2xl p-4">
+                                    <h3 className="font-bold text-xl mb-4">What's happening</h3>
+                                    {[1,2,3].map(i => (
+                                        <div key={i} className="py-3 hover:bg-white/5 cursor-pointer -mx-4 px-4 transition-colors">
+                                            <div className="text-xs text-gray-500 flex justify-between">
+                                                <span>Technology · Trending</span>
+                                                <Icons.More size={16} />
+                                            </div>
+                                            <div className="font-bold">#PulseGoldUpdate</div>
+                                            <div className="text-xs text-gray-500">120K Buzzes</div>
+                                        </div>
+                                    ))}
+                                </div>
+
+                                <div className="bg-[#16181c] rounded-2xl p-4">
+                                    <h3 className="font-bold text-xl mb-4">Who to follow</h3>
+                                    {Object.values(usersCache).slice(0, 3).filter(u => u.uid !== user.uid).map(u => (
+                                        <div key={u.id} className="flex justify-between items-center py-3 hover:bg-white/5 -mx-4 px-4 cursor-pointer transition-colors">
+                                            <div className="flex gap-2 items-center overflow-hidden">
+                                                <Avatar src={u.photoURL} name={u.displayName} />
+                                                <div className="overflow-hidden">
+                                                    <div className="font-bold truncate">{u.displayName}</div>
+                                                    <div className="text-gray-500 text-sm truncate">@{u.handle}</div>
+                                                </div>
+                                            </div>
+                                            <Button variant="secondary" size="sm" className="text-xs px-3 py-1">Follow</Button>
+                                        </div>
+                                    ))}
+                                </div>
+                                <div className="text-xs text-gray-500 px-4">
+                                    &copy; 2025 Pulse, Inc.
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Modals */}
+                        <Modal isOpen={!!modal} onClose={() => setModal(null)} title={modal?.type === 'edit' ? 'Edit Profile' : ''}>
+                            {modal?.type === 'edit' && <EditProfile user={userData} close={() => setModal(null)} />}
+                            {modal?.type === 'reply' && (
+                                <div className="space-y-4">
+                                    <div className="flex gap-4 relative">
+                                        <div className="flex flex-col items-center w-10">
+                                            <Avatar src={modal.data.authorPhoto} name={modal.data.authorName} />
+                                            <div className="w-0.5 bg-gray-800 grow my-2"></div>
+                                        </div>
+                                        <div>
+                                            <div className="flex gap-1 text-sm text-gray-500">
+                                                <span className="font-bold text-white">{modal.data.authorName}</span> @{modal.data.authorHandle} · {formatTime(modal.data.createdAt)}
+                                            </div>
+                                            <div className="text-white mt-1 mb-6">{modal.data.content}</div>
+                                        </div>
+                                    </div>
+                                    <div className="flex gap-4">
+                                        <Avatar src={userData.photoURL} name={userData.displayName} />
+                                        <div className="flex-1">
+                                            <textarea className="w-full bg-transparent outline-none text-xl min-h-[100px] text-white placeholder-gray-600" placeholder="Buzz your reply" autoFocus />
+                                        </div>
+                                    </div>
+                                    <div className="flex justify-end">
+                                        <Button onClick={() => setModal(null)}>Reply</Button>
+                                    </div>
+                                </div>
+                            )}
+                        </Modal>
+
+                    </div>
+                </ToastProvider>
+            );
+        };
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
     </script>
 </body>
 </html>
-
 
