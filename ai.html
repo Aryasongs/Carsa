@@ -1,0 +1,1106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pulse</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- React & ReactDOM -->
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    
+    <!-- Babel for JSX -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+    <style>
+        body {
+            background-color: black;
+            color: white;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        }
+        /* Hide scrollbar for Chrome, Safari and Opera */
+        .no-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        /* Hide scrollbar for IE, Edge and Firefox */
+        .no-scrollbar {
+            -ms-overflow-style: none;  /* IE and Edge */
+            scrollbar-width: none;  /* Firefox */
+        }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel" data-presets="react,stage-3">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+        import { 
+            getAuth, 
+            signInWithPopup, 
+            GoogleAuthProvider, 
+            signOut, 
+            onAuthStateChanged 
+        } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+        import { 
+            getFirestore, 
+            collection, 
+            addDoc, 
+            doc, 
+            setDoc, 
+            getDoc, 
+            updateDoc, 
+            deleteDoc, 
+            arrayUnion, 
+            arrayRemove, 
+            onSnapshot,
+            query,
+            orderBy,
+            limit
+        } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+        // --- Firebase Configuration ---
+        const firebaseConfig = {
+            apiKey: "AIzaSyB2XeuTfHZ7FYKLoYb4epKp3upmVqG0fzE",
+            authDomain: "pulse-17f40.firebaseapp.com",
+            databaseURL: "https://pulse-17f40-default-rtdb.firebaseio.com",
+            projectId: "pulse-17f40",
+            storageBucket: "pulse-17f40.firebasestorage.app",
+            messagingSenderId: "259780854138",
+            appId: "1:259780854138:web:89c265fd22a34a7f1fd6c3"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+
+        // --- Icons (Inline SVGs) ---
+        const Icon = ({ path, size = 24, className = "" }) => (
+            <svg 
+                xmlns="http://www.w3.org/2000/svg" 
+                width={size} 
+                height={size} 
+                viewBox="0 0 24 24" 
+                fill="none" 
+                stroke="currentColor" 
+                strokeWidth="2" 
+                strokeLinecap="round" 
+                strokeLinejoin="round" 
+                className={className}
+            >
+                {path}
+            </svg>
+        );
+
+        const Icons = {
+            Zap: (p) => <Icon {...p} path={<><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></>} />,
+            Home: (p) => <Icon {...p} path={<><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></>} />,
+            Bell: (p) => <Icon {...p} path={<><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.73 21a2 2 0 0 1-3.46 0"></path></>} />,
+            Mail: (p) => <Icon {...p} path={<><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path><polyline points="22,6 12,13 2,6"></polyline></>} />,
+            User: (p) => <Icon {...p} path={<><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></>} />,
+            Settings: (p) => <Icon {...p} path={<><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></>} />,
+            LogOut: (p) => <Icon {...p} path={<><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></>} />,
+            ImageIcon: (p) => <Icon {...p} path={<><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></>} />,
+            X: (p) => <Icon {...p} path={<><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></>} />,
+            Camera: (p) => <Icon {...p} path={<><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path><circle cx="12" cy="13" r="4"></circle></>} />,
+            MapPin: (p) => <Icon {...p} path={<><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></>} />,
+            LinkIcon: (p) => <Icon {...p} path={<><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></>} />,
+            Calendar: (p) => <Icon {...p} path={<><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></>} />,
+            Heart: (p) => <Icon {...p} path={<><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path></>} />,
+            MessageCircle: (p) => <Icon {...p} path={<><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"></path></>} />,
+            Repeat2: (p) => <Icon {...p} path={<><polyline points="17 1 21 5 17 9"></polyline><path d="M3 11V9a4 4 0 0 1 4-4h14"></path><polyline points="7 23 3 19 7 15"></polyline><path d="M21 13v2a4 4 0 0 1-4 4H3"></path></>} />,
+            Send: (p) => <Icon {...p} path={<><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></>} />,
+            Search: (p) => <Icon {...p} path={<><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></>} />,
+            MoreHorizontal: (p) => <Icon {...p} path={<><circle cx="12" cy="12" r="1"></circle><circle cx="19" cy="12" r="1"></circle><circle cx="5" cy="12" r="1"></circle></>} />,
+            Trash2: (p) => <Icon {...p} path={<><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></>} />,
+        };
+
+        const { useState, useEffect, useRef, useMemo } = React;
+
+        // --- Constants & Utilities ---
+        const PUBLIC_DATA_PATH = ['artifacts', firebaseConfig.projectId, 'public', 'data'];
+        const BUZZ_COLLECTION = 'pulse_buzzes';
+        const USER_COLLECTION = 'pulse_users';
+        const NOTIF_COLLECTION = 'pulse_notifications';
+        const CHAT_COLLECTION = 'pulse_chats';
+
+        const formatTime = (timestamp) => {
+            if (!timestamp) return 'Just now';
+            const now = Date.now();
+            const diff = now - timestamp;
+            const seconds = Math.floor(diff / 1000);
+            const minutes = Math.floor(seconds / 60);
+            const hours = Math.floor(minutes / 60);
+            const days = Math.floor(hours / 24);
+
+            if (seconds < 60) return `${seconds}s`;
+            if (minutes < 60) return `${minutes}m`;
+            if (hours < 24) return `${hours}h`;
+            return `${days}d`;
+        };
+
+        const compressImage = (file, maxWidth = 800) => {
+            return new Promise((resolve) => {
+                const reader = new FileReader();
+                reader.readAsDataURL(file);
+                reader.onload = (event) => {
+                    const img = new Image();
+                    img.src = event.target.result;
+                    img.onload = () => {
+                        const canvas = document.createElement('canvas');
+                        const ratio = maxWidth / img.width;
+                        canvas.width = maxWidth;
+                        canvas.height = img.height * ratio;
+                        const ctx = canvas.getContext('2d');
+                        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+                        resolve(canvas.toDataURL('image/jpeg', 0.7));
+                    };
+                };
+            });
+        };
+
+        const RichText = ({ text }) => {
+            if (!text) return null;
+            const parts = text.split(/((?:#[a-zA-Z0-9_]+)|(?:@[a-zA-Z0-9_]+))/g);
+            return (
+                <span>
+                    {parts.map((part, i) => {
+                        if (part.startsWith('#') || part.startsWith('@')) {
+                            return <span key={i} className="text-blue-500 hover:underline cursor-pointer">{part}</span>;
+                        }
+                        return part;
+                    })}
+                </span>
+            );
+        };
+
+        const Avatar = ({ src, name, size = 'md' }) => {
+            const initial = name ? name[0].toUpperCase() : '?';
+            const sizeClasses = {
+                sm: 'w-8 h-8 text-xs',
+                md: 'w-10 h-10 text-base',
+                lg: 'w-32 h-32 text-4xl border-4 border-black'
+            };
+            const sizeClass = sizeClasses[size] || sizeClasses.md;
+            
+            if (src) {
+                return <img src={src} alt={name} className={`${sizeClass} rounded-full object-cover bg-gray-800`} />;
+            }
+
+            const colors = ['bg-blue-500', 'bg-pink-500', 'bg-purple-500', 'bg-green-500', 'bg-yellow-500', 'bg-indigo-500'];
+            const colorIndex = name ? name.charCodeAt(0) % colors.length : 0;
+            
+            return (
+                <div className={`${sizeClass} ${colors[colorIndex]} rounded-full flex items-center justify-center font-bold text-white flex-shrink-0`}>
+                    {initial}
+                </div>
+            );
+        };
+
+        // --- UI Components ---
+        const Sidebar = ({ view, setView, currentUser, unreadCount, onLogout }) => (
+            <div className="fixed bottom-0 left-0 w-full bg-black border-t border-gray-800 md:relative md:w-64 md:border-t-0 md:border-r md:h-screen md:flex md:flex-col md:justify-between z-50">
+                <div className="flex justify-around md:flex-col md:justify-start md:px-4 md:py-6 md:space-y-4">
+                    <div className="hidden md:block mb-2 px-3">
+                        <h1 className="text-3xl font-bold text-white flex items-center gap-2 cursor-pointer" onClick={() => setView('home')}>
+                            <Icons.Zap className="fill-white w-8 h-8" />
+                        </h1>
+                    </div>
+                    
+                    <NavButton active={view === 'home'} onClick={() => setView('home')} icon={<Icons.Home size={26} />} label="Home" />
+                    <NavButton active={view === 'notifications'} onClick={() => setView('notifications')} icon={<Icons.Bell size={26} />} label="Notifications" badge={unreadCount} />
+                    <NavButton active={view === 'messages'} onClick={() => setView('messages')} icon={<Icons.Mail size={26} />} label="Messages" />
+                    <NavButton active={view === 'profile'} onClick={() => setView('profile')} icon={<Icons.User size={26} />} label="Profile" />
+                    <NavButton active={view === 'settings'} onClick={() => setView('settings')} icon={<Icons.Settings size={26} />} label="Settings" />
+
+                    <div className="hidden md:block mt-auto pt-6 border-t border-gray-800">
+                        <div className="flex items-center gap-3 mb-4 px-2">
+                            <Avatar src={currentUser.photoURL} name={currentUser.displayName} size="sm" />
+                            <div className="flex-1 overflow-hidden">
+                                <p className="font-bold truncate text-sm">{currentUser.displayName}</p>
+                                <p className="text-gray-500 truncate text-xs">@{currentUser.handle}</p>
+                            </div>
+                        </div>
+                        <button onClick={onLogout} className="flex items-center gap-4 px-4 py-3 text-gray-400 hover:text-red-500 transition-colors rounded-full hover:bg-gray-900 w-full">
+                            <Icons.LogOut size={22} />
+                            <span className="text-xl font-medium">Logout</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        );
+
+        const NavButton = ({ active, onClick, icon, label, badge }) => (
+            <button 
+                onClick={onClick}
+                className={`flex items-center gap-4 p-3 md:px-4 md:py-3 rounded-full transition-all relative
+                    ${active ? 'font-bold text-white' : 'text-gray-400 hover:bg-gray-900 hover:text-white'}
+                `}
+            >
+                <div className="relative">
+                    {icon}
+                    {badge > 0 && (
+                        <span className="absolute -top-1 -right-1 bg-blue-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full">
+                            {badge > 9 ? '9+' : badge}
+                        </span>
+                    )}
+                </div>
+                <span className="hidden md:block text-xl">{label}</span>
+            </button>
+        );
+
+        const ComposeBuzz = ({ userProfile, onPost }) => {
+            const [text, setText] = useState('');
+            const [image, setImage] = useState(null);
+            const [isPosting, setIsPosting] = useState(false);
+            const fileInputRef = useRef(null);
+
+            const handleImageSelect = async (e) => {
+                if (e.target.files?.[0]) {
+                    const compressed = await compressImage(e.target.files[0], 600);
+                    setImage(compressed);
+                }
+            };
+
+            const handleSubmit = async () => {
+                if ((!text.trim() && !image) || isPosting) return;
+                setIsPosting(true);
+                await onPost(text, image);
+                setText('');
+                setImage(null);
+                setIsPosting(false);
+            };
+
+            return (
+                <div className="border-b border-gray-800 p-4">
+                    <div className="flex gap-4">
+                        <Avatar src={userProfile?.photoURL} name={userProfile?.displayName} />
+                        <div className="flex-1">
+                            <textarea
+                                value={text}
+                                onChange={(e) => setText(e.target.value)}
+                                placeholder="What is happening?!"
+                                className="w-full bg-transparent text-xl text-white placeholder-gray-600 focus:outline-none resize-none min-h-[60px]"
+                                rows={2}
+                            ></textarea>
+                            {image && (
+                                <div className="relative mt-2 mb-4">
+                                    <img src={image} alt="Upload" className="rounded-2xl max-h-64 object-cover border border-gray-800" />
+                                    <button 
+                                        onClick={() => setImage(null)}
+                                        className="absolute top-2 right-2 bg-black/70 p-1.5 rounded-full hover:bg-black/90 text-white transition-colors"
+                                    >
+                                        <Icons.X size={16} />
+                                    </button>
+                                </div>
+                            )}
+                            <div className="flex justify-between items-center mt-2 border-t border-gray-800 pt-3">
+                                <div className="flex gap-2 text-blue-500">
+                                    <button onClick={() => fileInputRef.current?.click()} className="p-2 hover:bg-blue-500/10 rounded-full transition-colors">
+                                        <Icons.ImageIcon size={20} />
+                                    </button>
+                                    <input 
+                                        type="file" 
+                                        ref={fileInputRef} 
+                                        className="hidden" 
+                                        accept="image/*"
+                                        onChange={handleImageSelect}
+                                    />
+                                </div>
+                                <div className="flex items-center gap-4">
+                                    {text.length > 0 && (
+                                        <span className={`text-xs ${text.length > 260 ? 'text-red-500' : 'text-gray-500'}`}>
+                                            {280 - text.length} left
+                                        </span>
+                                    )}
+                                    <button
+                                        onClick={handleSubmit}
+                                        disabled={(!text.trim() && !image) || isPosting}
+                                        className={`bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-5 rounded-full transition-all disabled:opacity-50 disabled:cursor-not-allowed`}
+                                    >
+                                        {isPosting ? 'Buzzing...' : 'Buzz'}
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        const Buzz = ({ buzz, currentUser, onLike, onRebuzz, onReply, onDelete }) => {
+            const isLiked = buzz.likes?.includes(currentUser.uid);
+            const isRebuzzed = buzz.rebuzzes?.includes(currentUser.uid);
+            const isOwner = buzz.uid === currentUser.uid;
+
+            return (
+                <div className="border-b border-gray-800 p-4 hover:bg-white/5 transition-colors cursor-pointer group">
+                    {buzz.rebuzzedBy && (
+                        <div className="flex items-center gap-2 text-gray-500 text-sm mb-2 ml-8 font-bold">
+                            <Icons.Repeat2 size={14} /> <span>{buzz.rebuzzedBy} rebuzzed</span>
+                        </div>
+                    )}
+                    <div className="flex gap-3">
+                        <Avatar src={buzz.authorPhoto} name={buzz.authorName} />
+                        <div className="flex-1 min-w-0">
+                            <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-2 truncate text-[15px]">
+                                    <span className="font-bold text-white truncate hover:underline">{buzz.authorName}</span>
+                                    <span className="text-gray-500 truncate">@{buzz.authorHandle}</span>
+                                    <span className="text-gray-500">·</span>
+                                    <span className="text-gray-500 hover:underline">{formatTime(buzz.createdAt)}</span>
+                                </div>
+                                {isOwner && (
+                                    <button onClick={(e) => { e.stopPropagation(); onDelete(buzz.id); }} className="text-gray-600 hover:text-red-500 p-1.5 rounded-full hover:bg-red-500/10 transition-colors">
+                                        <Icons.Trash2 size={15} />
+                                    </button>
+                                )}
+                            </div>
+                            
+                            <div className="mt-0.5 text-white whitespace-pre-wrap break-words text-[15px] leading-normal">
+                                <RichText text={buzz.content} />
+                            </div>
+
+                            {buzz.image && (
+                                <div className="mt-3">
+                                    <img src={buzz.image} alt="Content" className="rounded-2xl max-h-80 w-full object-cover border border-gray-800" />
+                                </div>
+                            )}
+
+                            <div className="flex justify-between mt-3 max-w-md text-gray-500">
+                                <ActionButton 
+                                    icon={<Icons.MessageCircle size={18} />} 
+                                    count={buzz.replyCount || 0} 
+                                    color="blue" 
+                                    onClick={() => onReply(buzz)}
+                                />
+                                <ActionButton 
+                                    active={isRebuzzed} 
+                                    icon={<Icons.Repeat2 size={18} />} 
+                                    count={buzz.rebuzzes?.length || 0} 
+                                    color="green" 
+                                    onClick={() => onRebuzz(buzz)}
+                                />
+                                <ActionButton 
+                                    active={isLiked} 
+                                    icon={<Icons.Heart size={18} className={isLiked ? "fill-current" : ""} />} 
+                                    count={buzz.likes?.length || 0} 
+                                    color="pink" 
+                                    onClick={() => onLike(buzz)}
+                                />
+                                <ActionButton 
+                                    icon={<Icons.Zap size={18} />} 
+                                    color="blue" 
+                                    onClick={() => {}} 
+                                />
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        const ActionButton = ({ active, icon, count, color, onClick }) => {
+            const colorClasses = {
+                blue: 'text-blue-500',
+                green: 'text-green-500',
+                pink: 'text-pink-500',
+            };
+            const hoverClasses = {
+                blue: 'group-hover:text-blue-500 group-hover:bg-blue-500/10',
+                green: 'group-hover:text-green-500 group-hover:bg-green-500/10',
+                pink: 'group-hover:text-pink-500 group-hover:bg-pink-500/10',
+            };
+
+            return (
+                <button 
+                    onClick={(e) => { e.stopPropagation(); onClick(); }}
+                    className={`flex items-center gap-1 group transition-all ${active ? colorClasses[color] : 'text-gray-500'}`}
+                >
+                    <div className={`p-2 rounded-full transition-colors ${hoverClasses[color]}`}>
+                        {icon}
+                    </div>
+                    <span className={`text-xs ${active ? colorClasses[color] : `group-hover:text-${color}-500`}`}>
+                        {count > 0 ? count : ''}
+                    </span>
+                </button>
+            );
+        };
+
+        const EditProfileModal = ({ userProfile, onClose, onSave }) => {
+            const [name, setName] = useState(userProfile.displayName || '');
+            const [bio, setBio] = useState(userProfile.bio || '');
+            const [location, setLocation] = useState(userProfile.location || '');
+            const [website, setWebsite] = useState(userProfile.website || '');
+            const [avatar, setAvatar] = useState(userProfile.photoURL || '');
+            const [banner, setBanner] = useState(userProfile.bannerURL || '');
+            const [saving, setSaving] = useState(false);
+
+            const avatarRef = useRef(null);
+            const bannerRef = useRef(null);
+
+            const handleFile = async (e, type) => {
+                if (e.target.files?.[0]) {
+                    const compressed = await compressImage(e.target.files[0], type === 'banner' ? 1000 : 400);
+                    if (type === 'avatar') setAvatar(compressed);
+                    else setBanner(compressed);
+                }
+            };
+
+            const handleSave = async () => {
+                setSaving(true);
+                await onSave({ displayName: name, bio, location, website, photoURL: avatar, bannerURL: banner });
+                setSaving(false);
+                onClose();
+            };
+
+            return (
+                <div className="fixed inset-0 z-50 bg-blue-500/10 backdrop-blur-sm flex items-center justify-center p-4">
+                    <div className="bg-black w-full max-w-xl rounded-2xl shadow-2xl border border-gray-700 max-h-[90vh] overflow-y-auto no-scrollbar">
+                        <div className="flex justify-between items-center p-4 sticky top-0 bg-black/80 backdrop-blur z-10 border-b border-gray-800">
+                            <div className="flex items-center gap-4">
+                                <button onClick={onClose}><Icons.X size={20} /></button>
+                                <h2 className="font-bold text-xl">Edit Profile</h2>
+                            </div>
+                            <button 
+                                onClick={handleSave} 
+                                disabled={saving}
+                                className="bg-white text-black font-bold px-4 py-1.5 rounded-full hover:bg-gray-200 disabled:opacity-50"
+                            >
+                                {saving ? 'Saving' : 'Save'}
+                            </button>
+                        </div>
+                        <div className="h-48 bg-gray-800 relative group cursor-pointer" onClick={() => bannerRef.current?.click()}>
+                            {banner ? <img src={banner} className="w-full h-full object-cover opacity-80" /> : <div className="w-full h-full flex items-center justify-center text-gray-500"><Icons.ImageIcon /></div>}
+                            <div className="absolute inset-0 bg-black/30 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                                <div className="bg-black/50 p-3 rounded-full"><Icons.Camera size={24} className="text-white" /></div>
+                            </div>
+                            <input type="file" ref={bannerRef} className="hidden" accept="image/*" onChange={(e) => handleFile(e, 'banner')} />
+                        </div>
+                        <div className="px-4 relative -mt-16 mb-4">
+                            <div className="w-32 h-32 rounded-full border-4 border-black relative group cursor-pointer" onClick={() => avatarRef.current?.click()}>
+                                <Avatar src={avatar} name={name} size="lg" />
+                                <div className="absolute inset-0 rounded-full bg-black/30 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                                    <Icons.Camera size={24} className="text-white" />
+                                </div>
+                            </div>
+                            <input type="file" ref={avatarRef} className="hidden" accept="image/*" onChange={(e) => handleFile(e, 'avatar')} />
+                        </div>
+                        <div className="px-4 pb-8 space-y-6">
+                            <div className="border border-gray-700 rounded p-2 focus-within:border-blue-500 transition-colors">
+                                <label className="text-gray-500 text-xs block">Name</label>
+                                <input value={name} onChange={e => setName(e.target.value)} className="bg-transparent w-full outline-none text-white" />
+                            </div>
+                            <div className="border border-gray-700 rounded p-2 focus-within:border-blue-500 transition-colors">
+                                <label className="text-gray-500 text-xs block">Bio</label>
+                                <textarea value={bio} onChange={e => setBio(e.target.value)} className="bg-transparent w-full outline-none text-white resize-none h-20"></textarea>
+                            </div>
+                            <div className="border border-gray-700 rounded p-2 focus-within:border-blue-500 transition-colors">
+                                <label className="text-gray-500 text-xs block">Location</label>
+                                <input value={location} onChange={e => setLocation(e.target.value)} className="bg-transparent w-full outline-none text-white" />
+                            </div>
+                            <div className="border border-gray-700 rounded p-2 focus-within:border-blue-500 transition-colors">
+                                <label className="text-gray-500 text-xs block">Website</label>
+                                <input value={website} onChange={e => setWebsite(e.target.value)} className="bg-transparent w-full outline-none text-white" />
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        const LoginScreen = () => {
+            const handleGoogleLogin = async () => {
+                const provider = new GoogleAuthProvider();
+                try {
+                    await signInWithPopup(auth, provider);
+                } catch (error) {
+                    console.error("Login failed", error);
+                    alert("Login failed. If you are in a preview window, try opening in a new tab.");
+                }
+            };
+
+            return (
+                <div className="min-h-screen bg-black flex flex-col items-center justify-center p-6 text-white text-center">
+                    <Icons.Zap className="h-20 w-20 text-white mb-8 fill-white" />
+                    <h1 className="text-5xl font-extrabold tracking-tight mb-12">Happening now</h1>
+                    <h2 className="text-2xl font-bold mb-8">Join Pulse today.</h2>
+                    <button 
+                        onClick={handleGoogleLogin}
+                        className="flex items-center justify-center gap-3 bg-white text-black px-8 py-3 rounded-full font-bold text-lg hover:bg-gray-200 transition-colors w-full max-w-xs"
+                    >
+                        Sign up with Google
+                    </button>
+                    <div className="mt-12 text-gray-500 text-sm max-w-md">
+                        By signing up, you agree to the Terms of Service and Privacy Policy.
+                    </div>
+                </div>
+            );
+        };
+
+        const CreateProfileScreen = ({ authUser, onComplete }) => {
+            const [handle, setHandle] = useState('');
+            const [bio, setBio] = useState('');
+            const [error, setError] = useState('');
+
+            const handleSubmit = (e) => {
+                e.preventDefault();
+                const cleanHandle = handle.replace('@', '').trim().toLowerCase();
+                if (cleanHandle.length < 3) return setError("Handle too short");
+                
+                onComplete({
+                    uid: authUser.uid,
+                    displayName: authUser.displayName,
+                    email: authUser.email,
+                    photoURL: authUser.photoURL,
+                    handle: cleanHandle,
+                    bio: bio,
+                    createdAt: Date.now()
+                });
+            };
+
+            return (
+                <div className="min-h-screen bg-black flex items-center justify-center p-4 text-white">
+                    <div className="w-full max-w-md bg-black border border-gray-800 p-8 rounded-2xl">
+                        <div className="flex justify-center mb-6"><Icons.Zap size={40} className="text-white fill-white"/></div>
+                        <h2 className="text-2xl font-bold mb-2">Create your profile</h2>
+                        <p className="text-gray-500 mb-6">Choose how you appear on Pulse</p>
+                        
+                        <form onSubmit={handleSubmit} className="space-y-4">
+                            {error && <p className="text-red-500 text-sm">{error}</p>}
+                            <div className="relative">
+                                <input 
+                                    value={authUser.displayName || ''} 
+                                    disabled 
+                                    className="w-full bg-transparent border border-gray-700 rounded p-3 text-gray-400 cursor-not-allowed"
+                                />
+                                <label className="absolute -top-2 left-2 bg-black px-1 text-xs text-gray-500">Name</label>
+                            </div>
+                            
+                            <div className="relative">
+                                <input 
+                                    value={handle} 
+                                    onChange={e => setHandle(e.target.value)}
+                                    className="w-full bg-transparent border border-gray-700 rounded p-3 text-white focus:border-blue-500 outline-none"
+                                    placeholder="pulse_user"
+                                />
+                                <label className="absolute -top-2 left-2 bg-black px-1 text-xs text-blue-500">Handle</label>
+                            </div>
+
+                            <div className="relative">
+                                <textarea 
+                                    value={bio} 
+                                    onChange={e => setBio(e.target.value)}
+                                    className="w-full bg-transparent border border-gray-700 rounded p-3 text-white focus:border-blue-500 outline-none resize-none h-24"
+                                    placeholder="Tell the world about yourself"
+                                ></textarea>
+                                <label className="absolute -top-2 left-2 bg-black px-1 text-xs text-gray-500">Bio (Optional)</label>
+                            </div>
+
+                            <button type="submit" className="w-full bg-white text-black font-bold py-3 rounded-full mt-4 hover:bg-gray-200">
+                                Next
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            );
+        };
+
+        // --- Main App Logic ---
+        function App() {
+            const [user, setUser] = useState(null);
+            const [userProfile, setUserProfile] = useState(null);
+            const [loading, setLoading] = useState(true);
+            const [view, setView] = useState('home'); 
+            const [buzzes, setBuzzes] = useState([]);
+            const [notifications, setNotifications] = useState([]);
+            const [replyModalBuzz, setReplyModalBuzz] = useState(null);
+            const [editingProfile, setEditingProfile] = useState(false);
+            const [usersCache, setUsersCache] = useState({});
+
+            const [chats, setChats] = useState([]);
+            const [activeChat, setActiveChat] = useState(null);
+            const [messages, setMessages] = useState([]);
+            const [chatInput, setChatInput] = useState('');
+            const [newMessageUser, setNewMessageUser] = useState(false);
+
+            useEffect(() => {
+                const unsubscribeAuth = onAuthStateChanged(auth, async (u) => {
+                    setUser(u);
+                    if (u) {
+                        const profileRef = doc(db, ...PUBLIC_DATA_PATH, USER_COLLECTION, u.uid);
+                        const snap = await getDoc(profileRef);
+                        
+                        if (snap.exists()) {
+                            setUserProfile({id: snap.id, ...snap.data()});
+                        } else {
+                            setUserProfile(null); 
+                        }
+
+                        const usersRef = collection(db, ...PUBLIC_DATA_PATH, USER_COLLECTION);
+                        const unsubUsers = onSnapshot(usersRef, (snap) => {
+                            const cache = {};
+                            snap.docs.forEach(d => cache[d.id] = {id: d.id, ...d.data()});
+                            setUsersCache(cache);
+                            if(cache[u.uid]) setUserProfile(cache[u.uid]);
+                        });
+
+                        const buzzRef = collection(db, ...PUBLIC_DATA_PATH, BUZZ_COLLECTION);
+                        const unsubBuzz = onSnapshot(buzzRef, (snap) => {
+                            const b = snap.docs.map(d => ({id: d.id, ...d.data()})).sort((a,b) => b.createdAt - a.createdAt);
+                            setBuzzes(b);
+                        });
+
+                        const notifRef = collection(db, ...PUBLIC_DATA_PATH, NOTIF_COLLECTION);
+                        const unsubNotif = onSnapshot(notifRef, (snap) => {
+                            const n = snap.docs.map(d => ({id: d.id, ...d.data()}))
+                                .filter(n => n.recipientId === u.uid)
+                                .sort((a,b) => b.createdAt - a.createdAt);
+                            setNotifications(n);
+                        });
+
+                        const chatsRef = collection(db, ...PUBLIC_DATA_PATH, CHAT_COLLECTION);
+                        const unsubChats = onSnapshot(chatsRef, (snap) => {
+                            const c = snap.docs.map(d => ({id: d.id, ...d.data()}))
+                                .filter(chat => chat.participants.includes(u.uid))
+                                .sort((a,b) => b.updatedAt - a.updatedAt);
+                            setChats(c);
+                        });
+
+                        setLoading(false);
+                        return () => { unsubUsers(); unsubBuzz(); unsubNotif(); unsubChats(); };
+                    } else {
+                        setLoading(false);
+                        setUserProfile(null);
+                    }
+                });
+                return () => unsubscribeAuth();
+            }, []);
+
+            useEffect(() => {
+                if(!activeChat) return;
+                const msgsRef = collection(db, ...PUBLIC_DATA_PATH, CHAT_COLLECTION, activeChat.id, 'messages');
+                const unsub = onSnapshot(msgsRef, (snap) => {
+                    const m = snap.docs.map(d => ({id: d.id, ...d.data()})).sort((a,b) => a.createdAt - b.createdAt);
+                    setMessages(m);
+                });
+                return () => unsub();
+            }, [activeChat]);
+
+            const handleCreateProfile = async (data) => {
+                await setDoc(doc(db, ...PUBLIC_DATA_PATH, USER_COLLECTION, user.uid), data);
+                setUserProfile(data);
+            };
+
+            const handleUpdateProfile = async (updates) => {
+                await updateDoc(doc(db, ...PUBLIC_DATA_PATH, USER_COLLECTION, user.uid), updates);
+            };
+
+            const handlePost = async (text, image = null, replyTo = null) => {
+                const mentions = text.match(/@(\w+)/g) || [];
+                const hashtags = text.match(/#(\w+)/g) || [];
+                
+                const mentionedUids = [];
+                mentions.forEach(m => {
+                    const handle = m.substring(1).toLowerCase();
+                    const mentionedUser = Object.values(usersCache).find(u => u.handle === handle);
+                    if(mentionedUser) mentionedUids.push(mentionedUser.uid);
+                });
+
+                const newBuzz = {
+                    uid: user.uid,
+                    authorName: userProfile.displayName,
+                    authorHandle: userProfile.handle,
+                    authorPhoto: userProfile.photoURL,
+                    content: text,
+                    image: image,
+                    likes: [],
+                    rebuzzes: [],
+                    replyCount: 0,
+                    replyTo: replyTo ? replyTo.id : null,
+                    hashtags,
+                    mentions,
+                    createdAt: Date.now()
+                };
+
+                const ref = await addDoc(collection(db, ...PUBLIC_DATA_PATH, BUZZ_COLLECTION), newBuzz);
+
+                if (replyTo) {
+                    await addDoc(collection(db, ...PUBLIC_DATA_PATH, NOTIF_COLLECTION), {
+                        type: 'reply', actorId: user.uid, actorName: userProfile.displayName, recipientId: replyTo.uid, buzzId: ref.id, previewText: text, createdAt: Date.now(), read: false
+                    });
+                }
+
+                mentionedUids.forEach(async (uid) => {
+                    if (uid !== user.uid && uid !== replyTo?.uid) {
+                        await addDoc(collection(db, ...PUBLIC_DATA_PATH, NOTIF_COLLECTION), {
+                            type: 'mention', actorId: user.uid, actorName: userProfile.displayName, recipientId: uid, buzzId: ref.id, previewText: text, createdAt: Date.now(), read: false
+                        });
+                    }
+                });
+            };
+
+            const startChat = async (targetUser) => {
+                const existing = chats.find(c => c.participants.includes(targetUser.uid));
+                if(existing) {
+                    setActiveChat(existing);
+                    setNewMessageUser(false);
+                } else {
+                    const newChat = {
+                        participants: [user.uid, targetUser.uid],
+                        updatedAt: Date.now(),
+                        lastMessage: 'Started a conversation'
+                    };
+                    const ref = await addDoc(collection(db, ...PUBLIC_DATA_PATH, CHAT_COLLECTION), newChat);
+                    setActiveChat({id: ref.id, ...newChat});
+                    setNewMessageUser(false);
+                }
+            };
+
+            const sendMessage = async () => {
+                if(!chatInput.trim() || !activeChat) return;
+                const txt = chatInput;
+                setChatInput('');
+                
+                await addDoc(collection(db, ...PUBLIC_DATA_PATH, CHAT_COLLECTION, activeChat.id, 'messages'), {
+                    text: txt,
+                    senderId: user.uid,
+                    createdAt: Date.now()
+                });
+                
+                await updateDoc(doc(db, ...PUBLIC_DATA_PATH, CHAT_COLLECTION, activeChat.id), {
+                    lastMessage: txt,
+                    updatedAt: Date.now()
+                });
+            };
+
+            const handleDelete = async (id) => {
+                if(window.confirm("Delete buzz?")) await deleteDoc(doc(db, ...PUBLIC_DATA_PATH, BUZZ_COLLECTION, id));
+            };
+
+            const handleLike = async (buzz) => {
+                const ref = doc(db, ...PUBLIC_DATA_PATH, BUZZ_COLLECTION, buzz.id);
+                if(buzz.likes?.includes(user.uid)) {
+                    await updateDoc(ref, { likes: arrayRemove(user.uid) });
+                } else {
+                    await updateDoc(ref, { likes: arrayUnion(user.uid) });
+                    if(buzz.uid !== user.uid) {
+                        await addDoc(collection(db, ...PUBLIC_DATA_PATH, NOTIF_COLLECTION), {
+                            type: 'like', actorId: user.uid, actorName: userProfile.displayName, recipientId: buzz.uid, buzzId: buzz.id, previewText: buzz.content, createdAt: Date.now(), read: false
+                        });
+                    }
+                }
+            };
+
+            const handleRebuzz = async (buzz) => {
+                const ref = doc(db, ...PUBLIC_DATA_PATH, BUZZ_COLLECTION, buzz.id);
+                if(buzz.rebuzzes?.includes(user.uid)) {
+                    await updateDoc(ref, { rebuzzes: arrayRemove(user.uid) });
+                } else {
+                    await updateDoc(ref, { rebuzzes: arrayUnion(user.uid) });
+                    if(buzz.uid !== user.uid) {
+                        await addDoc(collection(db, ...PUBLIC_DATA_PATH, NOTIF_COLLECTION), {
+                            type: 'rebuzz', actorId: user.uid, actorName: userProfile.displayName, recipientId: buzz.uid, buzzId: buzz.id, previewText: buzz.content, createdAt: Date.now(), read: false
+                        });
+                    }
+                }
+            };
+
+            if (loading) return <div className="min-h-screen bg-black flex items-center justify-center text-white"><Icons.Zap className="animate-pulse w-12 h-12 fill-current" /></div>;
+            if (!user) return <LoginScreen />;
+            if (user && !userProfile) return <CreateProfileScreen authUser={user} onComplete={handleCreateProfile} />;
+
+            const visibleBuzzes = view === 'profile' 
+                ? buzzes.filter(b => b.uid === user.uid) 
+                : buzzes.filter(b => !b.replyTo);
+
+            return (
+                <div className="min-h-screen bg-black text-white font-sans flex justify-center">
+                    <div className="flex w-full max-w-7xl">
+                        
+                        <Sidebar 
+                            view={view} 
+                            setView={setView} 
+                            currentUser={userProfile} 
+                            unreadCount={notifications.filter(n => !n.read).length} 
+                            onLogout={() => signOut(auth)}
+                        />
+
+                        <main className="flex-1 w-full max-w-[600px] border-x border-gray-800 min-h-screen pb-20 md:pb-0 relative">
+                            <div className="sticky top-0 z-30 bg-black/80 backdrop-blur-md border-b border-gray-800 px-4 py-3 cursor-pointer" onClick={() => window.scrollTo(0,0)}>
+                                <h2 className="text-xl font-bold capitalize">{view}</h2>
+                            </div>
+
+                            {view === 'home' && (
+                                <>
+                                    <ComposeBuzz userProfile={userProfile} onPost={handlePost} />
+                                    {visibleBuzzes.map(b => (
+                                        <Buzz key={b.id} buzz={b} currentUser={user} onLike={handleLike} onRebuzz={handleRebuzz} onReply={setReplyModalBuzz} onDelete={handleDelete} />
+                                    ))}
+                                </>
+                            )}
+
+                            {view === 'profile' && (
+                                <div className="pb-20">
+                                    <div className="h-48 bg-gray-800 relative">
+                                        {userProfile.bannerURL && <img src={userProfile.bannerURL} className="w-full h-full object-cover" />}
+                                        <div className="absolute -bottom-16 left-4">
+                                            <div className="p-1 bg-black rounded-full">
+                                                <Avatar src={userProfile.photoURL} name={userProfile.displayName} size="lg" />
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div className="flex justify-end p-4">
+                                        <button onClick={() => setEditingProfile(true)} className="border border-gray-600 font-bold px-4 py-1.5 rounded-full hover:bg-gray-900 transition-colors">
+                                            Edit profile
+                                        </button>
+                                    </div>
+                                    <div className="px-4 mt-2">
+                                        <h2 className="text-2xl font-bold">{userProfile.displayName}</h2>
+                                        <p className="text-gray-500">@{userProfile.handle}</p>
+                                        {userProfile.bio && <p className="mt-3 text-white whitespace-pre-wrap">{userProfile.bio}</p>}
+                                        
+                                        <div className="flex gap-4 mt-3 text-gray-500 text-sm">
+                                            {userProfile.location && <span className="flex items-center gap-1"><Icons.MapPin size={14}/> {userProfile.location}</span>}
+                                            {userProfile.website && <span className="flex items-center gap-1"><Icons.LinkIcon size={14}/> <a href={userProfile.website} target="_blank" className="text-blue-500 hover:underline">{userProfile.website}</a></span>}
+                                            <span className="flex items-center gap-1"><Icons.Calendar size={14}/> Joined {new Date(userProfile.createdAt || Date.now()).toLocaleDateString()}</span>
+                                        </div>
+
+                                        <div className="flex gap-4 mt-4 text-sm">
+                                            <span className="text-gray-500"><strong className="text-white">0</strong> Following</span>
+                                            <span className="text-gray-500"><strong className="text-white">0</strong> Followers</span>
+                                        </div>
+                                    </div>
+                                    <div className="border-b border-gray-800 mt-4 flex">
+                                        <div className="px-4 py-3 font-bold border-b-4 border-blue-500 hover:bg-white/10 cursor-pointer flex-1 text-center transition-colors">Buzzes</div>
+                                        <div className="px-4 py-3 font-medium text-gray-500 hover:bg-white/10 cursor-pointer flex-1 text-center transition-colors">Replies</div>
+                                        <div className="px-4 py-3 font-medium text-gray-500 hover:bg-white/10 cursor-pointer flex-1 text-center transition-colors">Media</div>
+                                        <div className="px-4 py-3 font-medium text-gray-500 hover:bg-white/10 cursor-pointer flex-1 text-center transition-colors">Likes</div>
+                                    </div>
+                                    {visibleBuzzes.map(b => (
+                                        <Buzz key={b.id} buzz={b} currentUser={user} onLike={handleLike} onRebuzz={handleRebuzz} onReply={setReplyModalBuzz} onDelete={handleDelete} />
+                                    ))}
+                                </div>
+                            )}
+
+                            {view === 'messages' && (
+                                <div className="h-full flex flex-col min-h-[80vh]">
+                                    {!activeChat ? (
+                                        <div className="p-4">
+                                            <div className="flex justify-between mb-4 items-center">
+                                                <h2 className="text-2xl font-bold">Messages</h2>
+                                                <button onClick={() => setNewMessageUser(true)} className="p-2 hover:bg-gray-800 rounded-full transition-colors"><Icons.Mail size={20}/></button>
+                                            </div>
+                                            {chats.length === 0 ? (
+                                                <div className="text-center mt-10 text-gray-500">
+                                                    <h3 className="text-3xl font-bold text-white mb-2">Welcome to your inbox!</h3>
+                                                    <p>Drop a line, share Tweets and more with private conversations between you and others on Pulse.</p>
+                                                    <button onClick={() => setNewMessageUser(true)} className="mt-6 bg-blue-500 text-white font-bold py-3 px-8 rounded-full hover:bg-blue-600 transition-colors">Write a message</button>
+                                                </div>
+                                            ) : (
+                                                <div className="space-y-2">
+                                                    {chats.map(c => {
+                                                        const otherUid = c.participants.find(p => p !== user.uid);
+                                                        const otherUser = usersCache[otherUid];
+                                                        return (
+                                                            <div key={c.id} onClick={() => setActiveChat(c)} className="flex gap-3 p-3 hover:bg-gray-900 cursor-pointer rounded-lg transition-colors">
+                                                                <Avatar src={otherUser?.photoURL} name={otherUser?.displayName} />
+                                                                <div className="overflow-hidden">
+                                                                    <div className="flex items-center gap-2">
+                                                                        <span className="font-bold">{otherUser?.displayName}</span>
+                                                                        <span className="text-gray-500 text-sm">@{otherUser?.handle}</span>
+                                                                        <span className="text-gray-500 text-sm">· {formatTime(c.updatedAt)}</span>
+                                                                    </div>
+                                                                    <div className="text-gray-500 truncate">{c.lastMessage}</div>
+                                                                </div>
+                                                            </div>
+                                                        );
+                                                    })}
+                                                </div>
+                                            )}
+                                        </div>
+                                    ) : (
+                                        <div className="flex flex-col h-[calc(100vh-60px)] md:h-screen absolute inset-0 bg-black z-20">
+                                            <div className="flex items-center gap-4 p-3 border-b border-gray-800 bg-black/80 backdrop-blur">
+                                                <button onClick={() => setActiveChat(null)} className="p-2 hover:bg-gray-800 rounded-full transition-colors"><Icons.Repeat2 className="rotate-90" size={20} /></button>
+                                                <span className="font-bold text-lg">Chat</span>
+                                            </div>
+                                            <div className="flex-1 overflow-y-auto p-4 space-y-4 flex flex-col-reverse no-scrollbar">
+                                                {[...messages].reverse().map(m => (
+                                                    <div key={m.id} className={`max-w-[70%] p-3 rounded-2xl ${m.senderId === user.uid ? 'bg-blue-500 text-white self-end rounded-br-none' : 'bg-gray-800 text-white self-start rounded-bl-none'}`}>
+                                                        {m.text}
+                                                    </div>
+                                                ))}
+                                            </div>
+                                            <div className="p-3 border-t border-gray-800 bg-black flex gap-2">
+                                                <input 
+                                                    className="flex-1 bg-gray-900 rounded-full px-4 py-2 outline-none text-white focus:ring-1 focus:ring-blue-500" 
+                                                    placeholder="Start a new message"
+                                                    value={chatInput}
+                                                    onChange={e => setChatInput(e.target.value)}
+                                                    onKeyDown={e => e.key === 'Enter' && sendMessage()}
+                                                />
+                                                <button onClick={sendMessage} disabled={!chatInput.trim()} className="text-blue-500 p-2 hover:bg-blue-900/20 rounded-full transition-colors"><Icons.Send size={20} /></button>
+                                            </div>
+                                        </div>
+                                    )}
+                                    {newMessageUser && (
+                                        <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4" onClick={() => setNewMessageUser(false)}>
+                                            <div className="bg-black border border-gray-700 w-full max-w-lg rounded-2xl h-[60vh] flex flex-col" onClick={e => e.stopPropagation()}>
+                                                <div className="p-4 border-b border-gray-700 flex justify-between items-center">
+                                                    <h2 className="font-bold text-xl">New Message</h2>
+                                                    <button onClick={() => setNewMessageUser(false)}><Icons.X /></button>
+                                                </div>
+                                                <div className="p-4 flex-1 overflow-y-auto no-scrollbar">
+                                                    {Object.values(usersCache).filter(u => u.uid !== user.uid).map(u => (
+                                                        <div key={u.uid} onClick={() => startChat(u)} className="flex items-center gap-3 p-3 hover:bg-gray-900 cursor-pointer rounded-lg transition-colors">
+                                                            <Avatar src={u.photoURL} name={u.displayName} />
+                                                            <div>
+                                                                <div className="font-bold">{u.displayName}</div>
+                                                                <div className="text-gray-500 text-sm">@{u.handle}</div>
+                                                            </div>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+                            )}
+
+                            {view === 'notifications' && (
+                                <div className="divide-y divide-gray-800">
+                                    {notifications.map(n => (
+                                        <div key={n.id} className="p-4 flex gap-3 hover:bg-gray-900/30 transition-colors">
+                                            <div className="mt-1">
+                                                {n.type === 'like' ? <Icons.Heart className="text-pink-500 fill-current" size={20} /> : n.type === 'rebuzz' ? <Icons.Repeat2 className="text-green-500" size={20} /> : <Icons.MessageCircle className="text-blue-500" size={20} />}
+                                            </div>
+                                            <div>
+                                                <div className="flex items-center gap-2">
+                                                    <Avatar src={usersCache[n.actorId]?.photoURL} name={n.actorName} size="sm" />
+                                                    <span className="font-bold">{n.actorName}</span>{' '}
+                                                    <span className="text-gray-500">{n.type === 'like' ? 'liked your buzz' : n.type === 'mention' ? 'mentioned you' : 'replied'}</span>
+                                                </div>
+                                                <div className="text-gray-500 text-sm mt-1">{n.previewText}</div>
+                                            </div>
+                                        </div>
+                                    ))}
+                                    {notifications.length === 0 && <div className="p-8 text-center text-gray-500">Nothing here yet</div>}
+                                </div>
+                            )}
+
+                            {view === 'settings' && (
+                                <div className="p-4">
+                                    <h2 className="text-2xl font-bold mb-4">Settings</h2>
+                                    <p className="text-gray-500">More settings coming soon.</p>
+                                </div>
+                            )}
+                        </main>
+
+                        <div className="hidden lg:block w-[350px] pl-8 py-4">
+                            <div className="sticky top-4 space-y-4">
+                                <div className="bg-gray-900 rounded-full flex items-center px-4 py-3 focus-within:bg-black focus-within:ring-1 focus-within:ring-blue-500 border border-transparent focus-within:border-blue-500 group transition-colors">
+                                    <Icons.Search size={18} className="text-gray-500 mr-3 group-focus-within:text-blue-500" />
+                                    <input type="text" placeholder="Search Pulse" className="bg-transparent text-white focus:outline-none w-full" />
+                                </div>
+
+                                <div className="bg-gray-900 rounded-2xl p-4">
+                                    <h3 className="font-bold text-xl mb-4">What's happening</h3>
+                                    {[1,2,3].map(i => (
+                                        <div key={i} className="py-3 hover:bg-white/5 cursor-pointer -mx-4 px-4 transition-colors">
+                                            <div className="flex justify-between text-xs text-gray-500 mb-0.5">
+                                                <span>Trending in Tech</span>
+                                                <Icons.MoreHorizontal size={14} />
+                                            </div>
+                                            <div className="font-bold">#PulseAppRelease</div>
+                                            <div className="text-xs text-gray-500 mt-0.5">52.4K Buzzes</div>
+                                        </div>
+                                    ))}
+                                </div>
+
+                                <div className="bg-gray-900 rounded-2xl p-4">
+                                    <h3 className="font-bold text-xl mb-4">Who to follow</h3>
+                                    {Object.values(usersCache).slice(0, 3).filter(u => u.uid !== user?.uid).map(u => (
+                                        <div key={u.uid} className="flex items-center justify-between py-3 hover:bg-white/5 -mx-4 px-4 cursor-pointer transition-colors">
+                                            <div className="flex items-center gap-2">
+                                                <Avatar src={u.photoURL} name={u.displayName} />
+                                                <div className="overflow-hidden w-24">
+                                                    <div className="font-bold truncate">{u.displayName}</div>
+                                                    <div className="text-gray-500 text-sm truncate">@{u.handle}</div>
+                                                </div>
+                                            </div>
+                                            <button className="bg-white text-black px-4 py-1.5 rounded-full font-bold text-sm hover:bg-gray-200 transition-colors">Follow</button>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        </div>
+
+                    </div>
+
+                    {replyModalBuzz && (
+                        <div className="fixed inset-0 bg-blue-500/10 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={() => setReplyModalBuzz(null)}>
+                            <div className="bg-black border border-gray-700 w-full max-w-lg rounded-2xl p-4 shadow-2xl relative" onClick={e => e.stopPropagation()}>
+                                <button onClick={() => setReplyModalBuzz(null)} className="absolute top-4 left-4 p-1 hover:bg-gray-800 rounded-full transition-colors"><Icons.X size={20}/></button>
+                                <div className="pl-12 pt-8">
+                                    <div className="flex gap-4">
+                                        <div className="flex flex-col items-center">
+                                            <Avatar src={replyModalBuzz.authorPhoto} name={replyModalBuzz.authorName} />
+                                            <div className="w-0.5 bg-gray-800 flex-1 my-2"></div>
+                                        </div>
+                                        <div>
+                                            <div className="flex gap-2">
+                                                <span className="font-bold">{replyModalBuzz.authorName}</span>
+                                                <span className="text-gray-500">@{replyModalBuzz.authorHandle}</span>
+                                                <span className="text-gray-500">· {formatTime(replyModalBuzz.createdAt)}</span>
+                                            </div>
+                                            <p className="mt-1 mb-4">{replyModalBuzz.content}</p>
+                                            <p className="text-gray-500 text-sm mb-4">Replying to <span className="text-blue-500">@{replyModalBuzz.authorHandle}</span></p>
+                                        </div>
+                                    </div>
+                                    <div className="flex gap-4">
+                                        <Avatar src={userProfile?.photoURL} name={userProfile?.displayName} />
+                                        <div className="flex-1">
+                                            <textarea 
+                                                id="replyInput"
+                                                placeholder="Buzz your reply" 
+                                                className="w-full bg-transparent outline-none text-xl min-h-[100px] resize-none"
+                                                autoFocus
+                                            ></textarea>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div className="flex justify-end p-2">
+                                    <button 
+                                        onClick={() => {
+                                            const val = document.getElementById('replyInput').value;
+                                            if(val) { handlePost(val, null, replyModalBuzz); setReplyModalBuzz(null); }
+                                        }} 
+                                        className="bg-blue-500 text-white font-bold px-4 py-2 rounded-full hover:bg-blue-600 transition-colors"
+                                    >
+                                        Reply
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {editingProfile && (
+                        <EditProfileModal 
+                            userProfile={userProfile} 
+                            onClose={() => setEditingProfile(false)} 
+                            onSave={handleUpdateProfile} 
+                        />
+                    )}
+                </div>
+            );
+        }
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>
+
